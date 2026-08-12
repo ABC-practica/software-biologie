@@ -1,9 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import javafx.scene.control.Button?>
 <?import javafx.scene.layout.StackPane?>
 
-<StackPane xmlns="http://javafx.com/javafx"
-           xmlns:fx="http://javafx.com/fxml"
+<StackPane xmlns:fx="http://javafx.com/fxml"
            fx:controller="org.abc.controller.ObjectViewerController"
-           fx:id="root">
+           fx:id="viewerContainer">
+
+<Button text="Upload OBJ"
+            onAction="#handleUpload"/>
+
 </StackPane>

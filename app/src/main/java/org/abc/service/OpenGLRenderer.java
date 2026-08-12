@@ -81,7 +81,7 @@ public class OpenGLRenderer implements Renderer, Runnable{
         GL11.glMatrixMode(GL11.GL_MODELVIEW);
         GL11.glLoadIdentity();
 
-        GL11.glTranslatef(0.0f, 0.0f, -5.0f);
+        GL11.glTranslatef(0.0f, 0.0f, -2.5f);
         GL11.glRotatef(25.0f, 1.0f, 0.0f, 0.0f);
         GL11.glRotatef(35.0f, 0.0f, 1.0f, 0.0f);
 
