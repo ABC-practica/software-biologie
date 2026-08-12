@@ -1,11 +1,17 @@
 package org.abc.service;
 
+import org.abc.model.ScanMesh;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.opengl.GL11;
 public class OpenGLRenderer implements Renderer, Runnable{
 
     private long window;
+    private final ScanMesh object;
+
+    public OpenGLRenderer(ScanMesh object) {
+        this.object = object;
+    }
 
     @Override
     public void run() {
@@ -79,7 +85,7 @@ public class OpenGLRenderer implements Renderer, Runnable{
         GL11.glRotatef(25.0f, 1.0f, 0.0f, 0.0f);
         GL11.glRotatef(35.0f, 0.0f, 1.0f, 0.0f);
 
-        drawPrism();
+        drawMesh(object);
 
         GLFW.glfwSwapBuffers(window);
     }
@@ -90,44 +96,21 @@ public class OpenGLRenderer implements Renderer, Runnable{
         GLFW.glfwTerminate();
     }
 
-    private void drawPrism() {
-        GL11.glBegin(GL11.GL_QUADS);
+    private void drawMesh(ScanMesh mesh) {
+        float[] vertices = mesh.getVertices();
+        int[] indices = mesh.getIndices();
 
-        GL11.glColor3f(1.0f, 0.0f, 0.0f);
-        GL11.glVertex3f(-1, -1,  0.5f);
-        GL11.glVertex3f( 1, -1,  0.5f);
-        GL11.glVertex3f( 1,  1,  0.5f);
-        GL11.glVertex3f(-1,  1,  0.5f);
+        GL11.glBegin(GL11.GL_TRIANGLES);
 
-        GL11.glColor3f(0.5f, 0.0f, 0.0f);
-        GL11.glVertex3f(-1, -1, -0.5f);
-        GL11.glVertex3f(-1,  1, -0.5f);
-        GL11.glVertex3f( 1,  1, -0.5f);
-        GL11.glVertex3f( 1, -1, -0.5f);
+        for (int index : indices) {
+            int vertexIndex = index * 3;
 
-        GL11.glColor3f(0.7f, 0.0f, 0.0f);
-        GL11.glVertex3f(-1, -1, -0.5f);
-        GL11.glVertex3f(-1, -1,  0.5f);
-        GL11.glVertex3f(-1,  1,  0.5f);
-        GL11.glVertex3f(-1,  1, -0.5f);
-
-        GL11.glColor3f(0.8f, 0.0f, 0.0f);
-        GL11.glVertex3f(1, -1, -0.5f);
-        GL11.glVertex3f(1,  1, -0.5f);
-        GL11.glVertex3f(1,  1,  0.5f);
-        GL11.glVertex3f(1, -1,  0.5f);
-
-        GL11.glColor3f(1.0f, 0.2f, 0.2f);
-        GL11.glVertex3f(-1, 1, -0.5f);
-        GL11.glVertex3f(-1, 1,  0.5f);
-        GL11.glVertex3f( 1, 1,  0.5f);
-        GL11.glVertex3f( 1, 1, -0.5f);
-
-        GL11.glColor3f(0.4f, 0.0f, 0.0f);
-        GL11.glVertex3f(-1, -1, -0.5f);
-        GL11.glVertex3f( 1, -1, -0.5f);
-        GL11.glVertex3f( 1, -1,  0.5f);
-        GL11.glVertex3f(-1, -1,  0.5f);
+            GL11.glVertex3f(
+                    vertices[vertexIndex],
+                    vertices[vertexIndex + 1],
+                    vertices[vertexIndex + 2]
+            );
+        }
 
         GL11.glEnd();
     }
