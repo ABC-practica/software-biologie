@@ -1,0 +1,70 @@
+# Compiled Java
+*.class
+
+# Build output
+target/
+build/
+out/
+
+# IDEs
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Eclipse
+.classpath
+.project
+.settings/
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/.nb-gradle/
+
+# VS Code
+.vscode/
+
+# Visual Studio
+.vs/
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# Linux
+.directory
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+*~
+*.swp
+*.swo
+
+# Java crash dumps
+hs_err_pid*
+replay_pid*
+
+# Gradle
+.gradle/
+
+# Maven
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# JavaFX / generated artifacts
+*.jar
+*.war
+*.ear
+
+# Environment / local configuration
+.env
+.env.*
