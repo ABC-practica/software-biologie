@@ -6,10 +6,19 @@ import org.lwjgl.glfw.GLFW;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.opengl.GL11;
 
-public class OpenGLRenderer implements Renderer, Runnable, Zoomable {
+public class OpenGLRenderer implements Movable, Renderer, Runnable, Zoomable {
 
     private long window;
+
     private float cameraDistance = 2.5f;
+    private float positionX = 0.0f;
+    private float positionY = 0.0f;
+    private float positionZ = 0.0f;
+
+    private double lastMouseX;
+    private double lastMouseY;
+    private boolean dragging;
+
     private final ScanMesh object;
 
     public OpenGLRenderer(ScanMesh object) {
@@ -45,6 +54,36 @@ public class OpenGLRenderer implements Renderer, Runnable, Zoomable {
 
         GLFW.glfwSetScrollCallback(window, (window, xOffset, yOffset) -> {
             zoom((float) -yOffset * 0.2f);
+        });
+
+        GLFW.glfwSetMouseButtonCallback(window, (window, button, action, mods) -> {
+            if (button == GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
+                dragging = action == GLFW.GLFW_PRESS;
+
+                if (dragging) {
+                    double[] x = new double[1];
+                    double[] y = new double[1];
+
+                    GLFW.glfwGetCursorPos(window, x, y);
+
+                    lastMouseX = x[0];
+                    lastMouseY = y[0];
+                }
+            }
+        });
+
+        GLFW.glfwSetCursorPosCallback(window, (window, x, y) -> {
+            if (!dragging) {
+                return;
+            }
+
+            float dx = (float) (x - lastMouseX);
+            float dy = (float) (y - lastMouseY);
+
+            move(dx * 0.005f, -dy * 0.005f, 0.0f);
+
+            lastMouseX = x;
+            lastMouseY = y;
         });
 
         GLFW.glfwMakeContextCurrent(window);
@@ -127,7 +166,7 @@ public class OpenGLRenderer implements Renderer, Runnable, Zoomable {
         GL11.glMatrixMode(GL11.GL_MODELVIEW);
         GL11.glLoadIdentity();
 
-        GL11.glTranslatef(0.0f, 0.0f, -cameraDistance);
+        GL11.glTranslatef(positionX, positionY, positionZ - cameraDistance);
         GL11.glRotatef(25.0f, 1.0f, 0.0f, 0.0f);
         GL11.glRotatef(35.0f, 0.0f, 1.0f, 0.0f);
 
@@ -193,5 +232,12 @@ public class OpenGLRenderer implements Renderer, Runnable, Zoomable {
     public void zoom(float amount) {
         cameraDistance += amount;
         cameraDistance = Math.clamp(cameraDistance, 0.5f, 20.0f);
+    }
+
+    @Override
+    public void move(float x, float y, float z) {
+        this.positionX += x;
+        this.positionY += y;
+        this.positionZ += z;
     }
 }
