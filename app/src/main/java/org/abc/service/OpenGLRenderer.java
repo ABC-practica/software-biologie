@@ -10,6 +10,9 @@ public class OpenGLRenderer implements Movable, Renderer, Rotatable, Runnable, Z
 
     private long window;
 
+    private int windowWidth = 800;
+    private int windowHeight = 600;
+
     private float cameraDistance = 2.5f;
 
     private float positionX = 0.0f;
@@ -52,8 +55,8 @@ public class OpenGLRenderer implements Movable, Renderer, Rotatable, Runnable, Z
         GLFW.glfwWindowHint(GLFW.GLFW_VISIBLE, GLFW.GLFW_FALSE);
 
         window = GLFW.glfwCreateWindow(
-                800,
-                600,
+                windowWidth,
+                windowHeight,
                 "Regele",
                 0,
                 0
@@ -62,6 +65,14 @@ public class OpenGLRenderer implements Movable, Renderer, Rotatable, Runnable, Z
         if (window == 0) {
             throw new IllegalStateException("Unable to create GLFW window");
         }
+
+        GLFW.glfwSetFramebufferSizeCallback(window, (window, width, height) -> {
+            windowWidth = width;
+            windowHeight = height;
+
+            GL11.glViewport(0, 0, width, height);
+            updateProjection(width, height);
+        });
 
         GLFW.glfwSetScrollCallback(window, (window, xOffset, yOffset) -> {
             zoom((float) -yOffset * 0.2f);
@@ -92,19 +103,11 @@ public class OpenGLRenderer implements Movable, Renderer, Rotatable, Runnable, Z
             float dy = (float) (y - lastMouseY);
 
             if (rotating) {
-                rotate(
-                        -dy * 0.5f,
-                        dx * 0.5f,
-                        0.0f
-                );
+                rotate(-dy * 0.5f, dx * 0.5f, 0.0f);
             }
 
             if (moving) {
-                move(
-                        dx * 0.005f,
-                        -dy * 0.005f,
-                        0.0f
-                );
+                move(dx * 0.005f, -dy * 0.005f, 0.0f);
             }
 
             lastMouseX = x;
@@ -160,18 +163,24 @@ public class OpenGLRenderer implements Movable, Renderer, Rotatable, Runnable, Z
                 GL11.GL_AMBIENT_AND_DIFFUSE
         );
 
+        GL11.glViewport(0, 0, windowWidth, windowHeight);
+        updateProjection(windowWidth, windowHeight);
+    }
+
+    private void updateProjection(int width, int height) {
+        if (height == 0) {
+            return;
+        }
+
         GL11.glMatrixMode(GL11.GL_PROJECTION);
         GL11.glLoadIdentity();
 
-        float aspect = 800.0f / 600.0f;
+        float aspect = (float) width / height;
         float fov = 60.0f;
         float near = 0.1f;
         float far = 100.0f;
 
-        float yScale = (float) (
-                1.0 / Math.tan(Math.toRadians(fov / 2.0))
-        );
-
+        float yScale = (float) (1.0 / Math.tan(Math.toRadians(fov / 2.0)));
         float xScale = yScale / aspect;
 
         GL11.glFrustum(
@@ -261,7 +270,7 @@ public class OpenGLRenderer implements Movable, Renderer, Rotatable, Runnable, Z
     @Override
     public void zoom(float amount) {
         cameraDistance += amount;
-        cameraDistance = Math.clamp( cameraDistance, 0.5f, 20.0f );
+        cameraDistance = Math.clamp(cameraDistance, 0.5f, 20.0f);
     }
 
     @Override
