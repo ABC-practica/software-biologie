@@ -6,9 +6,10 @@ import org.lwjgl.glfw.GLFW;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.opengl.GL11;
 
-public class OpenGLRenderer implements Renderer, Runnable {
+public class OpenGLRenderer implements Renderer, Runnable, Zoomable {
 
     private long window;
+    private float cameraDistance = 2.5f;
     private final ScanMesh object;
 
     public OpenGLRenderer(ScanMesh object) {
@@ -41,6 +42,10 @@ public class OpenGLRenderer implements Renderer, Runnable {
             GLFW.glfwTerminate();
             throw new IllegalStateException("Unable to create GLFW window");
         }
+
+        GLFW.glfwSetScrollCallback(window, (window, xOffset, yOffset) -> {
+            zoom((float) -yOffset * 0.2f);
+        });
 
         GLFW.glfwMakeContextCurrent(window);
 
@@ -102,15 +107,31 @@ public class OpenGLRenderer implements Renderer, Runnable {
     public void render() {
         GLFW.glfwPollEvents();
 
+        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_CONTROL) == GLFW.GLFW_PRESS ||
+                GLFW.glfwGetKey(window, GLFW.GLFW_KEY_RIGHT_CONTROL) == GLFW.GLFW_PRESS) {
+
+            if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_EQUAL) == GLFW.GLFW_PRESS ||
+                    GLFW.glfwGetKey(window, GLFW.GLFW_KEY_KP_ADD) == GLFW.GLFW_PRESS) {
+                zoom(-0.05f);
+            }
+
+            if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_MINUS) == GLFW.GLFW_PRESS ||
+                    GLFW.glfwGetKey(window, GLFW.GLFW_KEY_KP_SUBTRACT) == GLFW.GLFW_PRESS) {
+                zoom(0.05f);
+            }
+        }
+
         GL11.glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
 
         GL11.glMatrixMode(GL11.GL_MODELVIEW);
         GL11.glLoadIdentity();
 
-        GL11.glTranslatef(0.0f, 0.0f, -2.5f);
+        GL11.glTranslatef(0.0f, 0.0f, -cameraDistance);
         GL11.glRotatef(25.0f, 1.0f, 0.0f, 0.0f);
         GL11.glRotatef(35.0f, 0.0f, 1.0f, 0.0f);
+
+        GL11.glColor3f(0.7f, 0.7f, 0.7f);
 
         drawMesh(object);
 
@@ -166,5 +187,11 @@ public class OpenGLRenderer implements Renderer, Runnable {
         }
 
         GL11.glEnd();
+    }
+
+    @Override
+    public void zoom(float amount) {
+        cameraDistance += amount;
+        cameraDistance = Math.clamp(cameraDistance, 0.5f, 20.0f);
     }
 }
