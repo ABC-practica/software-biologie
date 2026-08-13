@@ -62,7 +62,8 @@ public class MeshNormalizer {
 
         return new ScanMesh(
                 normalizedVertices,
-                mesh.getIndices()
+                mesh.getIndices(),
+                mesh.getTriangleMaterials()
         );
     }
 }

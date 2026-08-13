@@ -1,5 +1,6 @@
 package org.abc.service;
 
+import org.abc.model.Material;
 import org.abc.model.ScanMesh;
 import org.abc.util.LightNormalizer;
 import org.lwjgl.glfw.GLFW;
@@ -156,12 +157,7 @@ public class OpenGLRenderer implements Movable, Renderer, Rotatable, Runnable, Z
                 lightAmbient
         );
 
-        GL11.glEnable(GL11.GL_COLOR_MATERIAL);
-
-        GL11.glColorMaterial(
-                GL11.GL_FRONT_AND_BACK,
-                GL11.GL_AMBIENT_AND_DIFFUSE
-        );
+        GL11.glDisable(GL11.GL_COLOR_MATERIAL);
 
         GL11.glViewport(0, 0, windowWidth, windowHeight);
         updateProjection(windowWidth, windowHeight);
@@ -220,17 +216,23 @@ public class OpenGLRenderer implements Movable, Renderer, Rotatable, Runnable, Z
                 1.0f
         );
 
-        GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
+        GL11.glClear(
+                GL11.GL_COLOR_BUFFER_BIT
+                        | GL11.GL_DEPTH_BUFFER_BIT
+        );
 
         GL11.glMatrixMode(GL11.GL_MODELVIEW);
         GL11.glLoadIdentity();
 
-        GL11.glTranslatef(positionX, positionY, positionZ - cameraDistance);
+        GL11.glTranslatef(
+                positionX,
+                positionY,
+                positionZ - cameraDistance
+        );
+
         GL11.glRotatef(rotationX, 1.0f, 0.0f, 0.0f);
         GL11.glRotatef(rotationY, 0.0f, 1.0f, 0.0f);
         GL11.glRotatef(rotationZ, 0.0f, 0.0f, 1.0f);
-
-        GL11.glColor3f(0.7f, 0.7f, 0.7f);
 
         drawMesh(object);
 
@@ -245,32 +247,153 @@ public class OpenGLRenderer implements Movable, Renderer, Rotatable, Runnable, Z
     private void drawMesh(ScanMesh mesh) {
         float[] vertices = mesh.getVertices();
         int[] indices = mesh.getIndices();
+        Material[] materials = mesh.getTriangleMaterials();
 
         GL11.glBegin(GL11.GL_TRIANGLES);
 
         for (int i = 0; i < indices.length; i += 3) {
+            Material material = null;
+
+            if (materials != null) {
+                int triangleIndex = i / 3;
+
+                if (triangleIndex < materials.length) {
+                    material = materials[triangleIndex];
+                }
+            }
+
+            applyMaterial(material);
+
             int index1 = indices[i] * 3;
             int index2 = indices[i + 1] * 3;
             int index3 = indices[i + 2] * 3;
 
-            float[] p1 = {vertices[index1], vertices[index1 + 1], vertices[index1 + 2]};
-            float[] p2 = {vertices[index2], vertices[index2 + 1], vertices[index2 + 2]};
-            float[] p3 = {vertices[index3], vertices[index3 + 1], vertices[index3 + 2]};
-            float[] normal = LightNormalizer.calculateNormal(p1, p2, p3);
+            float[] p1 = {
+                    vertices[index1],
+                    vertices[index1 + 1],
+                    vertices[index1 + 2]
+            };
 
-            GL11.glNormal3f(normal[0], normal[1], normal[2]);
-            GL11.glVertex3f(p1[0], p1[1], p1[2]);
-            GL11.glVertex3f(p2[0], p2[1], p2[2]);
-            GL11.glVertex3f(p3[0], p3[1], p3[2]);
+            float[] p2 = {
+                    vertices[index2],
+                    vertices[index2 + 1],
+                    vertices[index2 + 2]
+            };
+
+            float[] p3 = {
+                    vertices[index3],
+                    vertices[index3 + 1],
+                    vertices[index3 + 2]
+            };
+
+            float[] normal = LightNormalizer.calculateNormal(
+                    p1,
+                    p2,
+                    p3
+            );
+
+            GL11.glNormal3f(
+                    normal[0],
+                    normal[1],
+                    normal[2]
+            );
+
+            GL11.glVertex3f(
+                    p1[0],
+                    p1[1],
+                    p1[2]
+            );
+
+            GL11.glVertex3f(
+                    p2[0],
+                    p2[1],
+                    p2[2]
+            );
+
+            GL11.glVertex3f(
+                    p3[0],
+                    p3[1],
+                    p3[2]
+            );
         }
 
         GL11.glEnd();
     }
 
+    private void applyMaterial(Material material) {
+        if (material == null) {
+            material = new Material(
+                    new float[]{0.7f, 0.7f, 0.7f},
+                    new float[]{1.0f, 1.0f, 1.0f},
+                    32.0f
+            );
+        }
+
+        float[] diffuseColor = material.getDiffuseColor();
+        float[] specularColor = material.getSpecularColor();
+
+        float alpha = diffuseColor.length > 3
+                ? diffuseColor[3]
+                : 1.0f;
+
+        float[] diffuse = {
+                diffuseColor[0],
+                diffuseColor[1],
+                diffuseColor[2],
+                alpha
+        };
+
+        float[] specular = {
+                specularColor[0],
+                specularColor[1],
+                specularColor[2],
+                1.0f
+        };
+
+        float[] ambient = {
+                diffuseColor[0] * 0.2f,
+                diffuseColor[1] * 0.2f,
+                diffuseColor[2] * 0.2f,
+                alpha
+        };
+
+        GL11.glMaterialfv(
+                GL11.GL_FRONT_AND_BACK,
+                GL11.GL_DIFFUSE,
+                diffuse
+        );
+
+        GL11.glMaterialfv(
+                GL11.GL_FRONT_AND_BACK,
+                GL11.GL_SPECULAR,
+                specular
+        );
+
+        GL11.glMaterialfv(
+                GL11.GL_FRONT_AND_BACK,
+                GL11.GL_AMBIENT,
+                ambient
+        );
+
+        GL11.glMaterialf(
+                GL11.GL_FRONT_AND_BACK,
+                GL11.GL_SHININESS,
+                Math.clamp(
+                        material.getShininess(),
+                        0.0f,
+                        128.0f
+                )
+        );
+    }
+
     @Override
     public void zoom(float amount) {
         cameraDistance += amount;
-        cameraDistance = Math.clamp(cameraDistance, 0.5f, 20.0f);
+        cameraDistance = Math.clamp(
+                cameraDistance,
+                0.5f,
+                20.0f
+        );
     }
 
     @Override
