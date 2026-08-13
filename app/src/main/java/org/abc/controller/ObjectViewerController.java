@@ -8,6 +8,7 @@ import org.abc.model.ScanMesh;
 import org.abc.service.Loader;
 import org.abc.service.ObjLoader;
 import org.abc.service.OpenGLRenderer;
+import org.abc.service.ThreeMfLoader;
 import org.abc.util.MeshNormalizer;
 
 import java.io.File;
@@ -19,7 +20,6 @@ public class ObjectViewerController {
     private StackPane viewerContainer;
 
     private final FileUploadModal fileUploadModal = new FileUploadModal();
-    private final Loader loader = new ObjLoader();
 
     private OpenGLRenderer renderer;
     private Thread renderThread;
@@ -35,6 +35,8 @@ public class ObjectViewerController {
                 return;
             }
 
+            Loader loader = getLoader(file);
+
             ScanMesh mesh = loader.load(file.toPath());
             mesh = MeshNormalizer.normalize(mesh);
 
@@ -43,6 +45,20 @@ public class ObjectViewerController {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    private Loader getLoader(File file) {
+        String fileName = file.getName().toLowerCase();
+
+        if (fileName.endsWith(".obj")) {
+            return new ObjLoader();
+        }
+
+        if (fileName.endsWith(".3mf")) {
+            return new ThreeMfLoader();
+        }
+
+        throw new IllegalArgumentException("Unsupported file format: " + fileName);
     }
 
     private void startRenderer(ScanMesh mesh) {

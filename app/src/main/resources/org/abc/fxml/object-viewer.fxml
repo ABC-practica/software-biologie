@@ -7,7 +7,7 @@
            fx:controller="org.abc.controller.ObjectViewerController"
            fx:id="viewerContainer">
 
-<Button text="Upload OBJ"
+<Button text="Upload OBJ/3MF"
             onAction="#handleUpload"/>
 
 </StackPane>
