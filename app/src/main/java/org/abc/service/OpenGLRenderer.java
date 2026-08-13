@@ -46,9 +46,7 @@ public class OpenGLRenderer implements Movable, Renderer, Rotatable, Runnable, Z
 
     @Override
     public void initialize() {
-        if (!GLFW.glfwInit()) {
-            throw new IllegalStateException("Unable to initialize GLFW");
-        }
+        GLFWManager.initialize();
 
         GLFW.glfwDefaultWindowHints();
         GLFW.glfwWindowHint(GLFW.GLFW_VISIBLE, GLFW.GLFW_FALSE);
@@ -62,7 +60,6 @@ public class OpenGLRenderer implements Movable, Renderer, Rotatable, Runnable, Z
         );
 
         if (window == 0) {
-            GLFW.glfwTerminate();
             throw new IllegalStateException("Unable to create GLFW window");
         }
 
@@ -234,7 +231,6 @@ public class OpenGLRenderer implements Movable, Renderer, Rotatable, Runnable, Z
     @Override
     public void cleanup() {
         GLFW.glfwDestroyWindow(window);
-        GLFW.glfwTerminate();
     }
 
     private void drawMesh(ScanMesh mesh) {
