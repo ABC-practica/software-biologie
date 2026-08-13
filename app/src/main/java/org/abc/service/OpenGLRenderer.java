@@ -1,0 +1,170 @@
+package org.abc.service;
+
+import org.abc.model.ScanMesh;
+import org.abc.util.LightNormalizer;
+import org.lwjgl.glfw.GLFW;
+import org.lwjgl.opengl.GL;
+import org.lwjgl.opengl.GL11;
+
+public class OpenGLRenderer implements Renderer, Runnable {
+
+    private long window;
+    private final ScanMesh object;
+
+    public OpenGLRenderer(ScanMesh object) {
+        this.object = object;
+    }
+
+    @Override
+    public void run() {
+        initialize();
+
+        while (!GLFW.glfwWindowShouldClose(window) && !Thread.currentThread().isInterrupted()) {
+            render();
+        }
+
+        cleanup();
+    }
+
+    @Override
+    public void initialize() {
+        if (!GLFW.glfwInit()) {
+            throw new IllegalStateException("Unable to initialize GLFW");
+        }
+
+        GLFW.glfwDefaultWindowHints();
+        GLFW.glfwWindowHint(GLFW.GLFW_VISIBLE, GLFW.GLFW_FALSE);
+
+        window = GLFW.glfwCreateWindow(800, 600, "Regele", 0, 0);
+
+        if (window == 0) {
+            GLFW.glfwTerminate();
+            throw new IllegalStateException("Unable to create GLFW window");
+        }
+
+        GLFW.glfwMakeContextCurrent(window);
+
+        GL.createCapabilities();
+        GLFW.glfwSwapInterval(1);
+        GLFW.glfwShowWindow(window);
+
+        GL11.glEnable(GL11.GL_DEPTH_TEST);
+
+        GL11.glEnable(GL11.GL_LIGHTING);
+        GL11.glEnable(GL11.GL_LIGHT0);
+
+        float[] lightPosition = {
+                2.0f, 3.0f, 4.0f, 1.0f
+        };
+
+        float[] lightDiffuse = {
+                1.0f, 1.0f, 1.0f, 1.0f
+        };
+
+        float[] lightAmbient = {
+                0.2f, 0.2f, 0.2f, 1.0f
+        };
+
+        GL11.glLightfv(GL11.GL_LIGHT0, GL11.GL_POSITION, lightPosition);
+        GL11.glLightfv(GL11.GL_LIGHT0, GL11.GL_DIFFUSE, lightDiffuse);
+        GL11.glLightfv(GL11.GL_LIGHT0, GL11.GL_AMBIENT, lightAmbient);
+
+        GL11.glEnable(GL11.GL_COLOR_MATERIAL);
+        GL11.glColorMaterial(
+                GL11.GL_FRONT_AND_BACK,
+                GL11.GL_AMBIENT_AND_DIFFUSE
+        );
+
+        GL11.glMatrixMode(GL11.GL_PROJECTION);
+        GL11.glLoadIdentity();
+
+        float aspect = 800.0f / 600.0f;
+        float fov = 60.0f;
+        float near = 0.1f;
+        float far = 100.0f;
+
+        float yScale = (float) (1.0 / Math.tan(Math.toRadians(fov / 2.0)));
+        float xScale = yScale / aspect;
+
+        GL11.glFrustum(
+                -near * xScale,
+                near * xScale,
+                -near * yScale,
+                near * yScale,
+                near,
+                far
+        );
+
+        GL11.glMatrixMode(GL11.GL_MODELVIEW);
+    }
+
+    @Override
+    public void render() {
+        GLFW.glfwPollEvents();
+
+        GL11.glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
+
+        GL11.glMatrixMode(GL11.GL_MODELVIEW);
+        GL11.glLoadIdentity();
+
+        GL11.glTranslatef(0.0f, 0.0f, -2.5f);
+        GL11.glRotatef(25.0f, 1.0f, 0.0f, 0.0f);
+        GL11.glRotatef(35.0f, 0.0f, 1.0f, 0.0f);
+
+        drawMesh(object);
+
+        GLFW.glfwSwapBuffers(window);
+    }
+
+    @Override
+    public void cleanup() {
+        GLFW.glfwDestroyWindow(window);
+        GLFW.glfwTerminate();
+    }
+
+    private void drawMesh(ScanMesh mesh) {
+        float[] vertices = mesh.getVertices();
+        int[] indices = mesh.getIndices();
+
+        GL11.glBegin(GL11.GL_TRIANGLES);
+
+        for (int i = 0; i < indices.length; i += 3) {
+            int index1 = indices[i] * 3;
+            int index2 = indices[i + 1] * 3;
+            int index3 = indices[i + 2] * 3;
+
+            float[] p1 = {
+                    vertices[index1],
+                    vertices[index1 + 1],
+                    vertices[index1 + 2]
+            };
+
+            float[] p2 = {
+                    vertices[index2],
+                    vertices[index2 + 1],
+                    vertices[index2 + 2]
+            };
+
+            float[] p3 = {
+                    vertices[index3],
+                    vertices[index3 + 1],
+                    vertices[index3 + 2]
+            };
+
+            float[] normal = LightNormalizer.calculateNormal(p1, p2, p3);
+
+            GL11.glNormal3f(
+                    normal[0],
+                    normal[1],
+                    normal[2]
+            );
+
+            GL11.glVertex3f(p1[0], p1[1], p1[2]);
+            GL11.glVertex3f(p2[0], p2[1], p2[2]);
+            GL11.glVertex3f(p3[0], p3[1], p3[2]);
+        }
+
+        GL11.glEnd();
+    }
+}
