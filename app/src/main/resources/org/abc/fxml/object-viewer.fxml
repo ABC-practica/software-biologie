@@ -1,17 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.scene.layout.BorderPane?>
-<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
 
-<BorderPane xmlns:fx="http://javafx.com/fxml"
-            fx:controller="org.abc.controller.ObjectViewerController">
-
-    <left>
-        <StackPane fx:id="toolboxContainer"/>
-    </left>
-
-    <center>
-        <StackPane fx:id="viewerContainer"/>
-    </center>
-
-</BorderPane>
+<VBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="org.abc.controller.ObjectViewerController"
+      fx:id="toolbox"
+      prefWidth="220"
+      spacing="10"/>

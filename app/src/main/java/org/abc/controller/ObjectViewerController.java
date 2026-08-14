@@ -1,12 +1,13 @@
 package org.abc.controller;
 
 import javafx.fxml.FXML;
-import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import org.abc.component.Toolbox;
 import org.abc.model.ScanMesh;
 import org.abc.service.Loader;
 import org.abc.service.ObjLoader;
 import org.abc.service.OpenGLRenderer;
+import org.abc.service.OpenGLWindow;
 import org.abc.service.ThreeMfLoader;
 import org.abc.util.MeshNormalizer;
 
@@ -16,42 +17,36 @@ import java.io.IOException;
 public class ObjectViewerController {
 
     @FXML
-    private StackPane toolboxContainer;
+    private VBox toolbox;
 
-    @FXML
-    private StackPane viewerContainer;
-
-    private OpenGLRenderer renderer;
+    private OpenGLWindow renderer;
     private Thread renderThread;
+
+    private ToolboxController toolboxController;
 
     @FXML
     private void initialize() {
-        Toolbox toolbox = new Toolbox();
+        Toolbox component = new Toolbox();
 
         try {
-            toolboxContainer.getChildren().add(
-                    toolbox.create(this::handleFileSelected)
+            toolbox.getChildren().add(
+                    component.create(
+                            this::handleFileSelected,
+                            null
+                    )
             );
+
+            toolboxController = component.getController();
+
         } catch (IOException e) {
-            throw new RuntimeException("Failed to load toolbox", e);
+            throw new RuntimeException(
+                    "Failed to load toolbox",
+                    e
+            );
         }
     }
 
     private void handleFileSelected(File file) {
-        try {
-            Loader loader = getLoader(file);
-
-            ScanMesh mesh = loader.load(file.toPath());
-            mesh = MeshNormalizer.normalize(mesh);
-
-            startRenderer(mesh);
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void loadFile(File file) {
         try {
             Loader loader = getLoader(file);
 
@@ -83,12 +78,24 @@ public class ObjectViewerController {
 
     private void startRenderer(ScanMesh mesh) {
         if (renderThread != null && renderThread.isAlive()) {
+            if (renderer != null) {
+                renderer.close();
+            }
+
             renderThread.interrupt();
         }
 
         renderer = new OpenGLRenderer(mesh);
 
-        renderThread = new Thread(renderer);
+        if (toolboxController != null) {
+            toolboxController.setWindow(renderer);
+        }
+
+        renderThread = new Thread(
+                renderer::open,
+                "OpenGL-Renderer"
+        );
+
         renderThread.setDaemon(true);
         renderThread.start();
     }

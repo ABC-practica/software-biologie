@@ -5,6 +5,7 @@
 <?import javafx.scene.layout.VBox?>
 
 <VBox xmlns:fx="http://javafx.com/fxml"
+      fx:id="root"
       fx:controller="org.abc.controller.ToolboxController"
       spacing="10"
       prefWidth="180"
@@ -19,5 +20,17 @@
             text="Upload OBJ/3MF"
             maxWidth="Infinity"
             onAction="#handleUpload"/>
+
+    <Button text="Refresh"
+            maxWidth="Infinity"
+            onAction="#handleRefresh"/>
+
+    <Button text="Reset Camera"
+            maxWidth="Infinity"
+            onAction="#handleResetCamera"/>
+
+    <Button text="Close Renderer"
+            maxWidth="Infinity"
+            onAction="#handleClose"/>
 
 </VBox>

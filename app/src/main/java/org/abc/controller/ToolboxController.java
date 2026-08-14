@@ -1,8 +1,10 @@
 package org.abc.controller;
 
 import javafx.fxml.FXML;
+import javafx.scene.layout.VBox;
 import javafx.stage.Window;
 import org.abc.component.FileUploadModal;
+import org.abc.service.OpenGLWindow;
 
 import java.io.File;
 import java.io.IOException;
@@ -10,30 +12,60 @@ import java.util.function.Consumer;
 
 public class ToolboxController {
 
-    private final FileUploadModal fileUploadModal = new FileUploadModal();
+    @FXML
+    private VBox root;
 
-    private Consumer<File> onFileSelected;
+    private Consumer<File> fileSelected;
+    private OpenGLWindow window;
 
-    public void setOnFileSelected(Consumer<File> onFileSelected) {
-        this.onFileSelected = onFileSelected;
+    public void setFileSelected(Consumer<File> fileSelected) {
+        this.fileSelected = fileSelected;
+    }
+
+    public void setWindow(OpenGLWindow window) {
+        this.window = window;
     }
 
     @FXML
     private void handleUpload() {
         try {
-            Window window = uploadButton.getScene().getWindow();
+            Window owner = root.getScene().getWindow();
 
-            File file = fileUploadModal.show(window);
+            FileUploadModal modal = new FileUploadModal();
+            File file = modal.show(owner);
 
-            if (file != null && onFileSelected != null) {
-                onFileSelected.accept(file);
+            if (file != null && fileSelected != null) {
+                fileSelected.accept(file);
             }
 
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new RuntimeException(
+                    "Failed to open file upload modal",
+                    e
+            );
         }
     }
 
     @FXML
-    private javafx.scene.control.Button uploadButton;
+    private void handleClose() {
+        if (window != null) {
+            window.close();
+
+            window = null;
+        }
+    }
+
+    @FXML
+    private void handleRefresh() {
+        if (window != null) {
+            window.refresh();
+        }
+    }
+
+    @FXML
+    private void handleResetCamera() {
+        if (window != null) {
+            window.resetCamera();
+        }
+    }
 }
