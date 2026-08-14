@@ -2,8 +2,7 @@ package org.abc.controller;
 
 import javafx.fxml.FXML;
 import javafx.scene.layout.StackPane;
-import javafx.stage.Window;
-import org.abc.component.FileUploadModal;
+import org.abc.component.Toolbox;
 import org.abc.model.ScanMesh;
 import org.abc.service.Loader;
 import org.abc.service.ObjLoader;
@@ -17,24 +16,43 @@ import java.io.IOException;
 public class ObjectViewerController {
 
     @FXML
-    private StackPane viewerContainer;
+    private StackPane toolboxContainer;
 
-    private final FileUploadModal fileUploadModal = new FileUploadModal();
+    @FXML
+    private StackPane viewerContainer;
 
     private OpenGLRenderer renderer;
     private Thread renderThread;
 
     @FXML
-    private void handleUpload() {
-        Window window = viewerContainer.getScene().getWindow();
+    private void initialize() {
+        Toolbox toolbox = new Toolbox();
 
         try {
-            File file = fileUploadModal.show(window);
+            toolboxContainer.getChildren().add(
+                    toolbox.create(this::handleFileSelected)
+            );
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to load toolbox", e);
+        }
+    }
 
-            if (file == null) {
-                return;
-            }
+    private void handleFileSelected(File file) {
+        try {
+            Loader loader = getLoader(file);
 
+            ScanMesh mesh = loader.load(file.toPath());
+            mesh = MeshNormalizer.normalize(mesh);
+
+            startRenderer(mesh);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void loadFile(File file) {
+        try {
             Loader loader = getLoader(file);
 
             ScanMesh mesh = loader.load(file.toPath());
@@ -58,7 +76,9 @@ public class ObjectViewerController {
             return new ThreeMfLoader();
         }
 
-        throw new IllegalArgumentException("Unsupported file format: " + fileName);
+        throw new IllegalArgumentException(
+                "Unsupported file format: " + fileName
+        );
     }
 
     private void startRenderer(ScanMesh mesh) {

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="org.abc.controller.ToolboxController"
+      spacing="10"
+      prefWidth="180"
+      fillWidth="true"
+      style="-fx-border-color: #cccccc; -fx-border-width: 0 1 0 0;">
+
+    <padding>
+        <Insets top="15" right="15" bottom="15" left="15"/>
+    </padding>
+
+    <Button fx:id="uploadButton"
+            text="Upload OBJ/3MF"
+            maxWidth="Infinity"
+            onAction="#handleUpload"/>
+
+</VBox>
