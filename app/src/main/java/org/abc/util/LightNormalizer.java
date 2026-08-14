@@ -24,7 +24,11 @@ public class LightNormalizer {
         );
 
         if (length == 0.0f) {
-            return new float[]{0.0f, 0.0f, 0.0f};
+            return new float[]{
+                    0.0f,
+                    0.0f,
+                    0.0f
+            };
         }
 
         return new float[]{

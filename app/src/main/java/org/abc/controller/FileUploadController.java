@@ -22,7 +22,7 @@ public class FileUploadController {
         fileChooser.setTitle("Select 3D Scan");
 
         fileChooser.getExtensionFilters().add(
-                new FileChooser.ExtensionFilter("OBJ Files", "*.obj")
+                new FileChooser.ExtensionFilter("OBJ/3MF Files", "*.obj", "*.3mf")
         );
 
         selectedFile = fileChooser.showOpenDialog(stage);

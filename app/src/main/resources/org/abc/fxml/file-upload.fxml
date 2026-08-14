@@ -16,7 +16,7 @@
         <Insets top="20" right="20" bottom="20" left="20"/>
     </padding>
 
-    <Label text="Select a 3D scan (.obj)"/>
+    <Label text="Select a 3D scan (.obj/.3mf)"/>
 
     <Button text="Choose File"
             onAction="#handleChooseFile"/>
