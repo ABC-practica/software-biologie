@@ -41,13 +41,17 @@ public class MeshNormalizer {
         float sizeY = maxY - minY;
         float sizeZ = maxZ - minZ;
 
-        float size = Math.max(sizeX, Math.max(sizeY, sizeZ));
+        float size = Math.max(
+                sizeX,
+                Math.max(sizeY, sizeZ)
+        );
 
         if (size == 0.0f) {
             return mesh;
         }
 
-        float[] normalizedVertices = new float[vertices.length];
+        float[] normalizedVertices =
+                new float[vertices.length];
 
         for (int i = 0; i < vertices.length; i += 3) {
             normalizedVertices[i] =
@@ -63,7 +67,8 @@ public class MeshNormalizer {
         return new ScanMesh(
                 normalizedVertices,
                 mesh.getIndices(),
-                mesh.getTriangleMaterials()
+                mesh.getTextureCoordinates(),
+                mesh.getVertexMaterials()
         );
     }
 }

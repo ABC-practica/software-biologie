@@ -4,37 +4,31 @@ public class ScanMesh {
 
     private final float[] vertices;
     private final int[] indices;
-    private final Material[] triangleMaterials;
+    private final Material[] vertexMaterials;
+    private final float[] textureCoordinates;
 
-    public ScanMesh(float[] vertices, int[] indices) {
+    public ScanMesh(
+            float[] vertices,
+            int[] indices,
+            float[] textureCoordinates,
+            Material[] vertexMaterials
+    ) {
         this.vertices = vertices;
         this.indices = indices;
-        this.triangleMaterials = null;
+        this.textureCoordinates = textureCoordinates;
+        this.vertexMaterials = vertexMaterials;
     }
 
-    public ScanMesh(float[] vertices, int[] indices, Material material) {
-        this.vertices = vertices;
-        this.indices = indices;
-
-        if (material == null) {
-            this.triangleMaterials = null;
-        } else {
-            this.triangleMaterials = new Material[indices.length / 3];
-
-            for (int i = 0; i < triangleMaterials.length; i++) {
-                triangleMaterials[i] = material;
-            }
-        }
+    public ScanMesh(float[] vertices, int[] indices) {
+        this(vertices, indices, null, null);
     }
 
     public ScanMesh(
             float[] vertices,
             int[] indices,
-            Material[] triangleMaterials
+            Material[] vertexMaterials
     ) {
-        this.vertices = vertices;
-        this.indices = indices;
-        this.triangleMaterials = triangleMaterials;
+        this(vertices, indices, null,vertexMaterials);
     }
 
     public float[] getVertices() {
@@ -45,15 +39,19 @@ public class ScanMesh {
         return indices;
     }
 
-    public Material getMaterial() {
-        if (triangleMaterials == null || triangleMaterials.length == 0) {
-            return null;
-        }
-
-        return triangleMaterials[0];
+    public Material[] getVertexMaterials() {
+        return vertexMaterials;
     }
 
-    public Material[] getTriangleMaterials() {
-        return triangleMaterials;
+    public float[] getTextureCoordinates() {
+        return textureCoordinates;
+    }
+
+    public boolean hasVertexMaterials() {
+        return vertexMaterials != null;
+    }
+
+    public boolean hasTextureCoordinates() {
+        return textureCoordinates != null;
     }
 }
