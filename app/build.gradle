@@ -7,6 +7,8 @@ plugins {
 group = 'org.abc'
 version = '1.0-SNAPSHOT'
 
+def lwjglVersion = "3.3.6"
+
 repositories {
     mavenCentral()
 }
@@ -17,19 +19,41 @@ java {
     }
 }
 
+
 javafx {
     version = '21'
     modules = [ 'javafx.controls', 'javafx.fxml' ]
 }
 
 application {
-    mainClass = 'com.abc.Main'
+    mainClass = 'org.abc.Main'
 }
 
 dependencies {
     testImplementation platform('org.junit:junit-bom:6.0.0')
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    implementation "org.lwjgl:lwjgl:$lwjglVersion"
+    implementation "org.lwjgl:lwjgl-opengl:$lwjglVersion"
+    implementation "org.lwjgl:lwjgl-glfw:$lwjglVersion"
+
+    runtimeOnly "org.lwjgl:lwjgl:$lwjglVersion:natives-windows"
+    runtimeOnly "org.lwjgl:lwjgl:$lwjglVersion:natives-linux"
+    runtimeOnly "org.lwjgl:lwjgl:$lwjglVersion:natives-macos"
+
+    runtimeOnly "org.lwjgl:lwjgl-opengl:$lwjglVersion:natives-windows"
+    runtimeOnly "org.lwjgl:lwjgl-opengl:$lwjglVersion:natives-linux"
+    runtimeOnly "org.lwjgl:lwjgl-opengl:$lwjglVersion:natives-macos"
+
+    runtimeOnly "org.lwjgl:lwjgl-glfw:$lwjglVersion:natives-windows"
+    runtimeOnly "org.lwjgl:lwjgl-glfw:$lwjglVersion:natives-linux"
+    runtimeOnly "org.lwjgl:lwjgl-glfw:$lwjglVersion:natives-macos"
+
+    implementation "org.lwjgl:lwjgl-stb:$lwjglVersion"
+    runtimeOnly "org.lwjgl:lwjgl-stb:$lwjglVersion:natives-linux"
+    runtimeOnly "org.lwjgl:lwjgl-stb:$lwjglVersion:natives-windows"
+    runtimeOnly "org.lwjgl:lwjgl-stb:$lwjglVersion:natives-macos"
 }
 
 test {
