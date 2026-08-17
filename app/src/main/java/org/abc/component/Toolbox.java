@@ -3,7 +3,7 @@ package org.abc.component;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import org.abc.controller.ToolboxController;
-import org.abc.service.OpenGLWindow;
+import org.abc.service.RendererControl;
 
 import java.io.IOException;
 import java.util.function.Consumer;
@@ -15,7 +15,7 @@ public class Toolbox {
 
     public Parent create(
             Consumer<File> fileSelected,
-            OpenGLWindow window
+            RendererControl window
     ) throws IOException {
 
         FXMLLoader loader = new FXMLLoader(

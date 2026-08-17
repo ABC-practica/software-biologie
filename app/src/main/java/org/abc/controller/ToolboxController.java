@@ -4,7 +4,7 @@ import javafx.fxml.FXML;
 import javafx.scene.layout.VBox;
 import javafx.stage.Window;
 import org.abc.component.FileUploadModal;
-import org.abc.service.OpenGLWindow;
+import org.abc.service.RendererControl;
 
 import java.io.File;
 import java.io.IOException;
@@ -16,13 +16,13 @@ public class ToolboxController {
     private VBox root;
 
     private Consumer<File> fileSelected;
-    private OpenGLWindow window;
+    private RendererControl window;
 
     public void setFileSelected(Consumer<File> fileSelected) {
         this.fileSelected = fileSelected;
     }
 
-    public void setWindow(OpenGLWindow window) {
+    public void setWindow(RendererControl window) {
         this.window = window;
     }
 

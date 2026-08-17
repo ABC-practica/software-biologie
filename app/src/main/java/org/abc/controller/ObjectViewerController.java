@@ -7,7 +7,7 @@ import org.abc.model.ScanMesh;
 import org.abc.service.Loader;
 import org.abc.service.ObjLoader;
 import org.abc.service.OpenGLRenderer;
-import org.abc.service.OpenGLWindow;
+import org.abc.service.RendererControl;
 import org.abc.service.ThreeMfLoader;
 import org.abc.util.MeshNormalizer;
 
@@ -19,16 +19,17 @@ public class ObjectViewerController {
     @FXML
     private VBox toolbox;
 
-    private OpenGLWindow renderer;
-    private Thread renderThread;
+    private RendererControl renderer;
 
     private ToolboxController toolboxController;
 
     @FXML
     private void initialize() {
+
         Toolbox component = new Toolbox();
 
         try {
+
             toolbox.getChildren().add(
                     component.create(
                             this::handleFileSelected,
@@ -36,9 +37,11 @@ public class ObjectViewerController {
                     )
             );
 
-            toolboxController = component.getController();
+            toolboxController =
+                    component.getController();
 
         } catch (IOException e) {
+
             throw new RuntimeException(
                     "Failed to load toolbox",
                     e
@@ -47,21 +50,30 @@ public class ObjectViewerController {
     }
 
     private void handleFileSelected(File file) {
-        try {
-            Loader loader = getLoader(file);
 
-            ScanMesh mesh = loader.load(file.toPath());
-            mesh = MeshNormalizer.normalize(mesh);
+        try {
+
+            Loader loader =
+                    getLoader(file);
+
+            ScanMesh mesh =
+                    loader.load(file.toPath());
+
+            mesh =
+                    MeshNormalizer.normalize(mesh);
 
             startRenderer(mesh);
 
         } catch (IOException e) {
+
             e.printStackTrace();
         }
     }
 
     private Loader getLoader(File file) {
-        String fileName = file.getName().toLowerCase();
+
+        String fileName =
+                file.getName().toLowerCase();
 
         if (fileName.endsWith(".obj")) {
             return new ObjLoader();
@@ -72,31 +84,34 @@ public class ObjectViewerController {
         }
 
         throw new IllegalArgumentException(
-                "Unsupported file format: " + fileName
+                "Unsupported file format: "
+                        + fileName
         );
     }
 
     private void startRenderer(ScanMesh mesh) {
-        if (renderThread != null && renderThread.isAlive()) {
-            if (renderer != null) {
-                renderer.close();
-            }
 
-            renderThread.interrupt();
-        }
+        stopRenderer();
 
-        renderer = new OpenGLRenderer(mesh);
+        OpenGLRenderer newRenderer =
+                new OpenGLRenderer(mesh);
+
+        renderer = newRenderer;
 
         if (toolboxController != null) {
-            toolboxController.setWindow(renderer);
+            toolboxController.setWindow(
+                    newRenderer
+            );
         }
 
-        renderThread = new Thread(
-                renderer::open,
-                "OpenGL-Renderer"
-        );
+        newRenderer.open();
+    }
 
-        renderThread.setDaemon(true);
-        renderThread.start();
+    private void stopRenderer() {
+
+        if (renderer != null) {
+            renderer.close();
+            renderer = null;
+        }
     }
 }

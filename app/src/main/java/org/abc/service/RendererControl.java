@@ -1,6 +1,6 @@
 package org.abc.service;
 
-public interface OpenGLWindow {
+public interface RendererControl {
 
     void open();
 
