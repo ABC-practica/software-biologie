@@ -22,11 +22,13 @@ public class OpenGLRenderer implements RenderStrategy, Runnable {
     private volatile long window;
     private volatile int windowWidth = 800;
     private volatile int windowHeight = 600;
+    private volatile int framebufferWidth = 800;
+    private volatile int framebufferHeight = 600;
 
     private int lastViewportWidth = -1;
     private int lastViewportHeight = -1;
 
-    private volatile float cameraDistance = 2.5f;
+    private volatile float cameraDistance = 3.5f;
 
     private volatile float positionX;
     private volatile float positionY;
@@ -108,13 +110,13 @@ public class OpenGLRenderer implements RenderStrategy, Runnable {
 
     private void setupCallbacks() {
         GLFW.glfwSetFramebufferSizeCallback(window, (w, width, height) -> {
-            windowWidth = Math.max(1, width);
-            windowHeight = Math.max(1, height);
+            framebufferWidth = Math.max(1, width);
+            framebufferHeight = Math.max(1, height);
         });
 
         GLFW.glfwSetScrollCallback(
                 window,
-                (w, xOffset, yOffset) -> zoom((float) -yOffset * 0.2f)
+                (w, xOffset, yOffset) -> zoom((float) -Math.signum(yOffset) * 0.15f)
         );
 
         GLFW.glfwSetKeyCallback(window, (w, key, scancode, action, mods) -> {
@@ -269,7 +271,7 @@ public class OpenGLRenderer implements RenderStrategy, Runnable {
 
     @Override
     public void resetCamera() {
-        cameraDistance = 2.5f;
+        cameraDistance = 3.5f;
 
         positionX = 0.0f;
         positionY = 0.0f;
@@ -310,8 +312,16 @@ public class OpenGLRenderer implements RenderStrategy, Runnable {
     }
 
     private void updateViewport() {
-        int width = windowWidth;
-        int height = windowHeight;
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            IntBuffer fw = stack.mallocInt(1);
+            IntBuffer fh = stack.mallocInt(1);
+            GLFW.glfwGetFramebufferSize(window, fw, fh);
+            framebufferWidth = Math.max(1, fw.get(0));
+            framebufferHeight = Math.max(1, fh.get(0));
+        }
+
+        int width = framebufferWidth;
+        int height = framebufferHeight;
 
         if (width == lastViewportWidth && height == lastViewportHeight) {
             return;

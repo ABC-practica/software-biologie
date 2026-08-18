@@ -3,10 +3,13 @@ package org.abc.service;
 import javafx.application.Platform;
 import javafx.scene.AmbientLight;
 import javafx.scene.Group;
+import javafx.scene.Node;
 import javafx.scene.PerspectiveCamera;
 import javafx.scene.PointLight;
 import javafx.scene.Scene;
 import javafx.scene.SceneAntialiasing;
+import javafx.scene.SubScene;
+import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.MeshView;
@@ -21,8 +24,10 @@ public class JavaFX3DRenderer implements RenderStrategy {
 
     private final ScanMesh scanMesh;
     private Stage stage;
+    private SubScene subScene;
+    private Pane embeddedContainer;
 
-    private volatile float cameraDistance = 2.5f;
+    private volatile float cameraDistance = 3.5f;
     private volatile float positionX = 0.0f;
     private volatile float positionY = 0.0f;
     private volatile float positionZ = 0.0f;
@@ -54,6 +59,36 @@ public class JavaFX3DRenderer implements RenderStrategy {
         }
     }
 
+    @Override
+    public void embedIn(Pane container) {
+        System.out.println("[INFO] JavaFX3DRenderer.embedIn() called. FX Thread: " + Platform.isFxApplicationThread());
+        if (Platform.isFxApplicationThread()) {
+            initAndEmbedInContainer(container);
+        } else {
+            Platform.runLater(() -> initAndEmbedInContainer(container));
+        }
+    }
+
+    private void initAndEmbedInContainer(Pane container) {
+        System.out.println("[INFO] JavaFX3DRenderer.initAndEmbedInContainer() starting...");
+        this.embeddedContainer = container;
+
+        PerspectiveCamera camera = buildPerspectiveCamera();
+        Group root = buildSceneRoot(camera);
+
+        subScene = new SubScene(root, Math.max(100, container.getWidth()), Math.max(100, container.getHeight()), true, SceneAntialiasing.BALANCED);
+        subScene.setFill(Color.rgb(15, 23, 42));
+        subScene.setCamera(camera);
+
+        subScene.widthProperty().bind(container.widthProperty());
+        subScene.heightProperty().bind(container.heightProperty());
+
+        setupNodeMouseHandlers(subScene);
+
+        container.getChildren().add(subScene);
+        System.out.println("[INFO] JavaFX 3D SubScene embedded successfully!");
+    }
+
     private void initAndShowStage() {
         System.out.println("[INFO] JavaFX3DRenderer.initAndShowStage() starting...");
         if (stage != null) {
@@ -63,6 +98,26 @@ public class JavaFX3DRenderer implements RenderStrategy {
             return;
         }
 
+        PerspectiveCamera camera = buildPerspectiveCamera();
+        Group root = buildSceneRoot(camera);
+
+        Scene scene = new Scene(root, 800, 600, true, SceneAntialiasing.BALANCED);
+        scene.setFill(Color.rgb(15, 23, 42));
+        scene.setCamera(camera);
+
+        setupNodeMouseHandlers(scene.getRoot());
+
+        stage = new Stage();
+        stage.setTitle("3D Renderer (JavaFX 3D)");
+        stage.setScene(scene);
+
+        stage.setOnCloseRequest(event -> close());
+
+        stage.show();
+        System.out.println("[INFO] JavaFX 3D Stage shown successfully!");
+    }
+
+    private Group buildSceneRoot(PerspectiveCamera camera) {
         TriangleMesh mesh = buildTriangleMesh(scanMesh);
         MeshView meshView = new MeshView(mesh);
 
@@ -76,46 +131,34 @@ public class JavaFX3DRenderer implements RenderStrategy {
         rzTransform = new Rotate(rotationZ, Rotate.Z_AXIS);
         tTransform = new Translate(positionX, positionY, positionZ);
 
-        meshGroup.getTransforms().addAll(tTransform, rxTransform, ryTransform, rzTransform);
+        meshGroup.getTransforms().addAll(rxTransform, ryTransform, rzTransform, tTransform);
 
-        AmbientLight ambientLight = new AmbientLight(Color.rgb(100, 100, 100));
+        AmbientLight ambientLight = new AmbientLight(Color.rgb(120, 120, 120));
         PointLight pointLight = new PointLight(Color.WHITE);
         pointLight.setTranslateX(2.0);
         pointLight.setTranslateY(-3.0);
         pointLight.setTranslateZ(-4.0);
 
-        Group root = new Group(meshGroup, ambientLight, pointLight);
+        return new Group(meshGroup, ambientLight, pointLight, camera);
+    }
 
+    private PerspectiveCamera buildPerspectiveCamera() {
         PerspectiveCamera camera = new PerspectiveCamera(true);
         camera.setNearClip(0.1);
         camera.setFarClip(100.0);
 
         cameraTranslate = new Translate(0, 0, -cameraDistance);
         camera.getTransforms().add(cameraTranslate);
-
-        Scene scene = new Scene(root, 800, 600, true, SceneAntialiasing.BALANCED);
-        scene.setFill(Color.rgb(25, 25, 25));
-        scene.setCamera(camera);
-
-        setupMouseHandlers(scene);
-
-        stage = new Stage();
-        stage.setTitle("3D Renderer (JavaFX 3D Fallback)");
-        stage.setScene(scene);
-
-        stage.setOnCloseRequest(event -> close());
-
-        stage.show();
-        System.out.println("[INFO] JavaFX 3D Stage shown successfully!");
+        return camera;
     }
 
-    private void setupMouseHandlers(Scene scene) {
-        scene.setOnMousePressed(event -> {
+    private void setupNodeMouseHandlers(Node node) {
+        node.setOnMousePressed(event -> {
             lastMouseX = event.getSceneX();
             lastMouseY = event.getSceneY();
         });
 
-        scene.setOnMouseDragged(event -> {
+        node.setOnMouseDragged(event -> {
             double dx = event.getSceneX() - lastMouseX;
             double dy = event.getSceneY() - lastMouseY;
 
@@ -129,7 +172,7 @@ public class JavaFX3DRenderer implements RenderStrategy {
             lastMouseY = event.getSceneY();
         });
 
-        scene.setOnScroll(event -> zoom((float) -event.getDeltaY() * 0.02f));
+        node.setOnScroll(event -> zoom((float) -Math.signum(event.getDeltaY()) * 0.15f));
     }
 
     public static TriangleMesh buildTriangleMesh(ScanMesh mesh) {
@@ -200,6 +243,15 @@ public class JavaFX3DRenderer implements RenderStrategy {
     @Override
     public void close() {
         Runnable closeTask = () -> {
+            if (subScene != null) {
+                subScene.widthProperty().unbind();
+                subScene.heightProperty().unbind();
+                if (embeddedContainer != null) {
+                    embeddedContainer.getChildren().remove(subScene);
+                    embeddedContainer = null;
+                }
+                subScene = null;
+            }
             if (stage != null) {
                 stage.close();
                 stage = null;
@@ -221,7 +273,7 @@ public class JavaFX3DRenderer implements RenderStrategy {
 
     @Override
     public void resetCamera() {
-        cameraDistance = 2.5f;
+        cameraDistance = 3.5f;
         positionX = 0.0f;
         positionY = 0.0f;
         positionZ = 0.0f;
