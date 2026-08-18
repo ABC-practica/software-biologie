@@ -23,12 +23,17 @@ public class App extends Application {
             );
 
             Scene scene = new Scene(loader.load());
-            System.out.println("[INFO] FXML loaded successfully. Setting up primary Stage...");
+            scene.getStylesheets().add(
+                    App.class.getResource("/org/abc/css/style.css").toExternalForm()
+            );
+            System.out.println("[INFO] FXML & CSS loaded successfully. Setting up primary Stage...");
 
-            stage.setTitle("3D Scan Toolbox");
+            stage.setTitle("3D Scan Studio");
             stage.setScene(scene);
-            stage.setWidth(220);
-            stage.setHeight(300);
+            stage.setWidth(1100);
+            stage.setHeight(750);
+            stage.setMinWidth(750);
+            stage.setMinHeight(500);
 
             stage.setOnCloseRequest(event -> {
                 System.out.println("[INFO] Primary stage close requested.");

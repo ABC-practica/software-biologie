@@ -1,9 +1,83 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
-<VBox xmlns:fx="http://javafx.com/fxml"
-      fx:controller="org.abc.controller.ObjectViewerController"
-      fx:id="toolbox"
-      prefWidth="220"
-      spacing="10"/>
+<BorderPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="org.abc.controller.ObjectViewerController"
+            prefWidth="1100"
+            prefHeight="750">
+
+    <!-- Top Header / Toolbar -->
+    <top>
+        <HBox styleClass="toolbar-container">
+            <HBox styleClass="app-branding">
+                <Label text="3D Scan Studio" styleClass="app-logo-text"/>
+            </HBox>
+
+            <Region styleClass="toolbar-separator"/>
+
+            <!-- Toolbar Action Buttons -->
+            <Button text="Open 3D Model"
+                    styleClass="btn, btn-primary"
+                    onAction="#handleUpload"/>
+
+            <Button text="Reset View"
+                    styleClass="btn"
+                    onAction="#handleResetCamera"/>
+
+            <Button text="Refresh"
+                    styleClass="btn"
+                    onAction="#handleRefresh"/>
+
+            <Button text="Clear View"
+                    styleClass="btn, btn-danger"
+                    onAction="#handleClose"/>
+
+            <!-- Flexible Spacer -->
+            <Region HBox.hgrow="ALWAYS"/>
+
+            <!-- Active File Info -->
+            <Label fx:id="activeFileLabel"
+                   text="No model loaded"
+                   styleClass="active-file-label"/>
+        </HBox>
+    </top>
+
+    <!-- Center Main Viewport Area (Chenar Renderer) -->
+    <center>
+        <StackPane fx:id="viewportContainer" styleClass="viewport-box">
+            <BorderPane.margin>
+                <Insets top="10" right="12" bottom="10" left="12"/>
+            </BorderPane.margin>
+
+            <!-- Empty state placeholder when no 3D mesh is active -->
+            <VBox fx:id="emptyStateView" styleClass="empty-state-container">
+                <VBox styleClass="empty-state-card">
+                    <Label text="No 3D Model Loaded" styleClass="empty-state-title"/>
+                    <Label text="Select a 3D scan file (.obj or .3mf) to view and inspect" styleClass="empty-state-subtitle"/>
+                    <Button text="Open 3D Model File"
+                            styleClass="btn, btn-primary"
+                            onAction="#handleUpload"/>
+                </VBox>
+            </VBox>
+        </StackPane>
+    </center>
+
+    <!-- Bottom Status Bar -->
+    <bottom>
+        <HBox styleClass="status-bar">
+            <Label fx:id="statusLabel"
+                   text="System Ready. Left drag to rotate | Right drag to pan | Scroll to zoom"
+                   styleClass="status-text"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Label text="JavaFX 3D Engine" styleClass="status-tip"/>
+        </HBox>
+    </bottom>
+</BorderPane>
