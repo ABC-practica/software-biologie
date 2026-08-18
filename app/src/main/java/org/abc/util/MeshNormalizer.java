@@ -71,4 +71,28 @@ public class MeshNormalizer {
                 mesh.getVertexMaterials()
         );
     }
+
+    public static ScanMesh translate(
+            ScanMesh mesh,
+            float x,
+            float y,
+            float z
+    ) {
+        float[] vertices = mesh.getVertices();
+
+        float[] translated = vertices.clone();
+
+        for (int i = 0; i < translated.length; i += 3) {
+            translated[i] += x;
+            translated[i + 1] += y;
+            translated[i + 2] += z;
+        }
+
+        return new ScanMesh(
+                translated,
+                mesh.getIndices(),
+                mesh.getTextureCoordinates(),
+                mesh.getVertexMaterials()
+        );
+    }
 }
