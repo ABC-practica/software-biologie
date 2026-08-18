@@ -11,6 +11,7 @@ import java.util.List;
 
 public class ObjLoader implements Loader {
 
+    @Override
     public ScanMesh load(Path path) throws IOException {
         List<float[]> vertices = new ArrayList<>();
         List<Integer> indices = new ArrayList<>();
@@ -19,23 +20,52 @@ public class ObjLoader implements Loader {
             String line;
 
             while ((line = reader.readLine()) != null) {
-                String[] parts = line.trim().split("\\s+");
+                line = line.trim();
 
-                if (parts.length == 0) {
+                if (line.isEmpty() || line.startsWith("#")) {
                     continue;
                 }
 
+                String[] parts = line.split("\\s+");
+
                 switch (parts[0]) {
-                    case "v" -> vertices.add(new float[]{
-                            Float.parseFloat(parts[1]),
-                            Float.parseFloat(parts[2]),
-                            Float.parseFloat(parts[3])
-                    });
+                    case "v" -> {
+                        vertices.add(new float[]{
+                                Float.parseFloat(parts[1]),
+                                Float.parseFloat(parts[2]),
+                                Float.parseFloat(parts[3])
+                        });
+                    }
 
                     case "f" -> {
+                        if (parts.length < 4) {
+                            continue;
+                        }
+
+                        // Convert the face vertices to OBJ vertex indices.
+                        int[] face = new int[parts.length - 1];
+
                         for (int i = 1; i < parts.length; i++) {
                             String[] faceData = parts[i].split("/");
-                            indices.add(Integer.parseInt(faceData[0]) - 1);
+
+                            int index = Integer.parseInt(faceData[0]);
+
+                            // OBJ supports negative indices.
+                            if (index < 0) {
+                                index = vertices.size() + index;
+                            } else {
+                                // OBJ indices are 1-based.
+                                index--;
+                            }
+
+                            face[i - 1] = index;
+                        }
+
+                        // Triangulate the face.
+                        for (int i = 1; i < face.length - 1; i++) {
+                            indices.add(face[0]);
+                            indices.add(face[i]);
+                            indices.add(face[i + 1]);
                         }
                     }
                 }

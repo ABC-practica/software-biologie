@@ -1,13 +1,17 @@
 package org.abc.controller;
 
 import javafx.fxml.FXML;
+import javafx.scene.control.Label;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.stage.Window;
+import org.abc.component.FileUploadModal;
 import org.abc.component.Toolbox;
 import org.abc.model.ScanMesh;
 import org.abc.service.Loader;
 import org.abc.service.ObjLoader;
-import org.abc.service.OpenGLRenderer;
-import org.abc.service.RendererControl;
+import org.abc.service.RenderStrategy;
+import org.abc.service.RenderStrategyFactory;
 import org.abc.service.ThreeMfLoader;
 import org.abc.util.MeshNormalizer;
 
@@ -19,79 +23,249 @@ import java.util.List;
 public class ObjectViewerController {
 
     @FXML
+    private StackPane viewportContainer;
+
+    @FXML
+    private VBox emptyStateView;
+
+    @FXML
     private VBox toolbox;
 
-    private RendererControl renderer;
+    @FXML
+    private Label activeFileLabel;
+
+    @FXML
+    private Label statusLabel;
+
+    private RenderStrategy renderer;
+
+    private final List<RenderStrategy> renderers = new ArrayList<>();
 
     private ToolboxController toolboxController;
 
     @FXML
     private void initialize() {
+        System.out.println(
+                "[INFO] ObjectViewerController initialized successfully."
+        );
 
-        Toolbox component = new Toolbox();
+        if (toolbox != null) {
+            Toolbox component = new Toolbox();
 
+            try {
+                toolbox.getChildren().add(
+                        component.create(
+                                this::handleFilesSelected,
+                                null
+                        )
+                );
+
+                toolboxController = component.getController();
+
+            } catch (IOException e) {
+                throw new RuntimeException(
+                        "Failed to load toolbox",
+                        e
+                );
+            }
+        }
+
+        updateUIState(
+                null,
+                "System Ready. No model loaded."
+        );
+    }
+
+    @FXML
+    private void handleUpload() {
         try {
+            Window owner = viewportContainer.getScene().getWindow();
 
-            toolbox.getChildren().add(
-                    component.create(
-                            this::handleFilesSelected,
-                            null
-                    )
-            );
+            FileUploadModal modal = new FileUploadModal();
+            List<File> files = modal.show(owner);
 
-            toolboxController =
-                    component.getController();
+            if (files != null && !files.isEmpty()) {
+                handleFilesSelected(files);
+            }
 
         } catch (IOException e) {
-
             throw new RuntimeException(
-                    "Failed to load toolbox",
+                    "Failed to open file upload modal",
                     e
             );
         }
     }
 
+    public void handleFileSelected(File file) {
+        if (file == null) {
+            return;
+        }
+
+        handleFilesSelected(List.of(file));
+    }
+
     private void handleFilesSelected(List<File> files) {
+        if (files == null || files.isEmpty()) {
+            return;
+        }
+
+        stopRenderers();
+
+        if (emptyStateView != null) {
+            emptyStateView.setVisible(false);
+            emptyStateView.setManaged(false);
+        }
 
         List<ScanMesh> meshes = new ArrayList<>();
+        List<File> loadedFiles = new ArrayList<>();
 
-        float spacing = 2.5f;
-
-        for (int i = 0; i < files.size(); i++) {
-            File file = files.get(i);
-
+        for (File file : files) {
             try {
-
-                Loader loader =
-                        getLoader(file);
-
-                ScanMesh mesh =
-                        loader.load(file.toPath());
-
-                mesh =
-                        MeshNormalizer.normalize(mesh);
-
-                mesh.setPosition(
-                        i * spacing,
-                        0.0f,
-                        0.0f
+                System.out.println(
+                        "[INFO] Loading 3D file: "
+                                + file.getAbsolutePath()
                 );
 
+                Loader loader = getLoader(file);
+
+                ScanMesh mesh = loader.load(file.toPath());
+                mesh = MeshNormalizer.normalize(mesh);
+
                 meshes.add(mesh);
+                loadedFiles.add(file);
 
-            } catch (IOException e) {
+                System.out.println(
+                        "[INFO] Loaded: "
+                                + file.getName()
+                );
 
+            } catch (Exception e) {
+                System.err.println(
+                        "[ERROR] Failed to load 3D file: "
+                                + file.getName()
+                                + ": "
+                                + e.getMessage()
+                );
                 e.printStackTrace();
             }
         }
 
-        if (!meshes.isEmpty()) {
-            startRenderer(meshes);
+        if (meshes.isEmpty()) {
+            updateUIState(
+                    null,
+                    "No models could be loaded."
+            );
+            return;
+        }
+
+        positionMeshes(meshes);
+
+        try {
+            RenderStrategy newRenderer =
+                    RenderStrategyFactory.createRenderer(meshes);
+
+            renderer = newRenderer;
+            renderers.add(newRenderer);
+
+            newRenderer.embedIn(viewportContainer);
+
+            if (toolboxController != null) {
+                toolboxController.setWindow(newRenderer);
+            }
+
+            int vertexCount = 0;
+            int faceCount = 0;
+
+            for (ScanMesh mesh : meshes) {
+                if (mesh.getVertices() != null) {
+                    vertexCount += mesh.getVertices().length / 3;
+                }
+
+                if (mesh.getIndices() != null) {
+                    faceCount += mesh.getIndices().length / 3;
+                }
+            }
+
+            String fileLabel;
+
+            if (loadedFiles.size() == 1) {
+                fileLabel = loadedFiles.get(0).getName();
+            } else {
+                fileLabel = loadedFiles.size() + " models loaded";
+            }
+
+            updateUIState(
+                    fileLabel,
+                    String.format(
+                            "Loaded %d of %d selected models | Vertices: %,d | Faces: %,d | Controls: Drag to rotate, Right drag to pan, Scroll to zoom",
+                            loadedFiles.size(),
+                            files.size(),
+                            vertexCount,
+                            faceCount
+                    )
+            );
+
+        } catch (Exception e) {
+            System.err.println(
+                    "[ERROR] Failed to create renderer: "
+                            + e.getMessage()
+            );
+            e.printStackTrace();
+
+            updateUIState(
+                    null,
+                    "Failed to create renderer: "
+                            + e.getMessage()
+            );
         }
     }
 
-    private Loader getLoader(File file) {
+    private void positionMeshes(List<ScanMesh> meshes) {
+        float spacing = 0.5f;
+        float currentX = 0.0f;
 
+        for (ScanMesh mesh : meshes) {
+            float width = getMeshWidth(mesh);
+
+            mesh.setPosition(
+                    currentX + width / 2.0f,
+                    0.0f,
+                    0.0f
+            );
+
+            currentX += width + spacing;
+        }
+
+        float totalWidth = currentX - spacing;
+
+        for (ScanMesh mesh : meshes) {
+            mesh.move(
+                    -totalWidth / 2.0f,
+                    0.0f,
+                    0.0f
+            );
+        }
+    }
+
+    private float getMeshWidth(ScanMesh mesh) {
+        float[] vertices = mesh.getVertices();
+
+        if (vertices == null || vertices.length < 3) {
+            return 1.0f;
+        }
+
+        float minX = vertices[0];
+        float maxX = vertices[0];
+
+        for (int i = 3; i + 2 < vertices.length; i += 3) {
+            minX = Math.min(minX, vertices[i]);
+            maxX = Math.max(maxX, vertices[i]);
+        }
+
+        return Math.max(0.5f, maxX - minX);
+    }
+
+    private Loader getLoader(File file) {
         String fileName =
                 file.getName().toLowerCase();
 
@@ -109,29 +283,82 @@ public class ObjectViewerController {
         );
     }
 
-    private void startRenderer(List<ScanMesh> meshes) {
+    @FXML
+    private void handleClose() {
+        stopRenderers();
 
-        stopRenderer();
+        if (emptyStateView != null) {
+            emptyStateView.setVisible(true);
+            emptyStateView.setManaged(true);
+        }
 
-        OpenGLRenderer newRenderer =
-                new OpenGLRenderer(meshes);
+        updateUIState(
+                null,
+                "System Ready. No model loaded."
+        );
+    }
 
-        renderer = newRenderer;
+    @FXML
+    private void handleRefresh() {
+        for (RenderStrategy currentRenderer : renderers) {
+            currentRenderer.refresh();
+        }
 
-        if (toolboxController != null) {
-            toolboxController.setWindow(
-                    newRenderer
+        if (statusLabel != null) {
+            statusLabel.setText(
+                    "Viewport refreshed."
+            );
+        }
+    }
+
+    @FXML
+    private void handleResetCamera() {
+        for (RenderStrategy currentRenderer : renderers) {
+            currentRenderer.resetCamera();
+        }
+
+        if (statusLabel != null) {
+            statusLabel.setText(
+                    "Camera reset to default view."
+            );
+        }
+    }
+
+    private void stopRenderers() {
+        for (RenderStrategy currentRenderer : renderers) {
+            try {
+                currentRenderer.close();
+            } catch (Exception e) {
+                System.err.println(
+                        "[WARN] Failed to close renderer: "
+                                + e.getMessage()
+                );
+            }
+        }
+
+        renderers.clear();
+        renderer = null;
+    }
+
+    private void updateUIState(
+            String fileName,
+            String statusMessage
+    ) {
+        if (activeFileLabel != null) {
+            activeFileLabel.setText(
+                    fileName != null
+                            ? fileName
+                            : "No model loaded"
             );
         }
 
-        newRenderer.open();
+        if (statusLabel != null
+                && statusMessage != null) {
+            statusLabel.setText(statusMessage);
+        }
     }
 
-    private void stopRenderer() {
-
-        if (renderer != null) {
-            renderer.close();
-            renderer = null;
-        }
+    public RenderStrategy getRenderer() {
+        return renderer;
     }
 }

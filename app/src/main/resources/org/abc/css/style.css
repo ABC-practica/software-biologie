@@ -1,0 +1,162 @@
+/* Geology App Theme (Slate Blue / Mineral) - Matching THEMES.md */
+
+.root {
+    -fx-base: #0F172A;
+    -fx-background-color: #0F172A;
+    -fx-font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    -fx-text-fill: #F8FAFC;
+}
+
+/* --- Top Header / Toolbar --- */
+.toolbar-container {
+    -fx-background-color: #1E293B;
+    -fx-border-color: #2D3E4A;
+    -fx-border-width: 0 0 1px 0;
+    -fx-padding: 10px 16px;
+    -fx-spacing: 12px;
+    -fx-alignment: center-left;
+}
+
+.app-branding {
+    -fx-spacing: 8px;
+    -fx-alignment: center-left;
+}
+
+.app-logo-text {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-fill: #F8FAFC;
+}
+
+.app-badge {
+    -fx-background-color: rgba(79, 107, 126, 0.25);
+    -fx-text-fill: #D97706;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-padding: 2px 6px;
+    -fx-background-radius: 4px;
+}
+
+.toolbar-separator {
+    -fx-border-color: #2D3E4A;
+    -fx-border-width: 0 1px 0 0;
+    -fx-padding: 0 4px;
+}
+
+/* --- Toolbar Buttons --- */
+.btn {
+    -fx-background-color: #2D3E4A;
+    -fx-text-fill: #F8FAFC;
+    -fx-font-size: 13px;
+    -fx-font-weight: normal;
+    -fx-padding: 7px 14px;
+    -fx-background-radius: 6px;
+    -fx-border-color: #4F6B7E;
+    -fx-border-radius: 6px;
+    -fx-cursor: hand;
+}
+
+.btn:hover {
+    -fx-background-color: #3A4F5E;
+    -fx-border-color: #64748B;
+}
+
+.btn:pressed {
+    -fx-background-color: #1E293B;
+}
+
+.btn-primary {
+    -fx-background-color: #4F6B7E;
+    -fx-text-fill: #F8FAFC;
+    -fx-font-weight: bold;
+    -fx-border-color: #4F6B7E;
+}
+
+.btn-primary:hover {
+    -fx-background-color: #607D94;
+    -fx-border-color: #607D94;
+}
+
+.btn-primary:pressed {
+    -fx-background-color: #2D3E4A;
+}
+
+.btn-danger {
+    -fx-background-color: rgba(220, 38, 38, 0.15);
+    -fx-text-fill: #DC2626;
+    -fx-border-color: rgba(220, 38, 38, 0.3);
+}
+
+.btn-danger:hover {
+    -fx-background-color: rgba(220, 38, 38, 0.3);
+    -fx-border-color: #DC2626;
+}
+
+.active-file-label {
+    -fx-text-fill: #64748B;
+    -fx-font-size: 12px;
+    -fx-font-style: italic;
+    -fx-background-color: #0F172A;
+    -fx-padding: 5px 10px;
+    -fx-background-radius: 4px;
+    -fx-border-color: #2D3E4A;
+    -fx-border-radius: 4px;
+}
+
+/* --- Viewport Container (Chenar Renderer) --- */
+.viewport-box {
+    -fx-background-color: #0F172A;
+    -fx-border-color: #2D3E4A;
+    -fx-border-width: 1px;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+}
+
+/* Empty State Styling */
+.empty-state-container {
+    -fx-alignment: center;
+    -fx-spacing: 16px;
+    -fx-padding: 40px;
+}
+
+.empty-state-card {
+    -fx-background-color: #1E293B;
+    -fx-border-color: #2D3E4A;
+    -fx-border-radius: 12px;
+    -fx-background-radius: 12px;
+    -fx-padding: 36px 48px;
+    -fx-alignment: center;
+    -fx-spacing: 14px;
+    -fx-effect: dropshadow(two-pass-box, rgba(0,0,0,0.4), 16, 0.0, 0, 4);
+}
+
+.empty-state-title {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-fill: #F8FAFC;
+}
+
+.empty-state-subtitle {
+    -fx-font-size: 13px;
+    -fx-fill: #64748B;
+}
+
+/* --- Status Bar --- */
+.status-bar {
+    -fx-background-color: #0F172A;
+    -fx-border-color: #2D3E4A;
+    -fx-border-width: 1px 0 0 0;
+    -fx-padding: 6px 16px;
+    -fx-spacing: 12px;
+    -fx-alignment: center-left;
+}
+
+.status-text {
+    -fx-font-size: 12px;
+    -fx-fill: #64748B;
+}
+
+.status-tip {
+    -fx-font-size: 11px;
+    -fx-fill: #64748B;
+}
