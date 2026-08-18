@@ -18,7 +18,7 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-public class OpenGLRenderer implements RendererControl, Movable, Renderer, Rotatable, Runnable, Zoomable {
+public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable, Renderer, Rotatable, Runnable, Zoomable {
 
     private volatile long window;
     private volatile int windowWidth = 800;

@@ -4,8 +4,8 @@ import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.stage.FileChooser;
 import javafx.stage.Window;
+import org.abc.component.FileUploadModal;
 import org.abc.component.Toolbox;
 import org.abc.model.ScanMesh;
 import org.abc.service.Loader;
@@ -39,11 +39,15 @@ public class ObjectViewerController {
 
     private RenderStrategy renderer;
 
+    private final List<RenderStrategy> renderers = new ArrayList<>();
+
     private ToolboxController toolboxController;
 
     @FXML
     private void initialize() {
-        System.out.println("[INFO] ObjectViewerController initialized successfully.");
+        System.out.println(
+                "[INFO] ObjectViewerController initialized successfully."
+        );
 
         if (toolbox != null) {
             Toolbox component = new Toolbox();
@@ -59,33 +63,36 @@ public class ObjectViewerController {
                 toolboxController = component.getController();
 
             } catch (IOException e) {
-                throw new RuntimeException("Failed to load toolbox", e);
+                throw new RuntimeException(
+                        "Failed to load toolbox",
+                        e
+                );
             }
         }
 
-        updateUIState(null, "System Ready. No model loaded.");
+        updateUIState(
+                null,
+                "System Ready. No model loaded."
+        );
     }
 
     @FXML
     private void handleUpload() {
-        Window owner = viewportContainer != null && viewportContainer.getScene() != null
-                ? viewportContainer.getScene().getWindow()
-                : null;
+        try {
+            Window owner = viewportContainer.getScene().getWindow();
 
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Select 3D Scan File");
-        fileChooser.getExtensionFilters().add(
-                new FileChooser.ExtensionFilter(
-                        "3D Mesh Files (*.obj, *.3mf)",
-                        "*.obj",
-                        "*.3mf"
-                )
-        );
+            FileUploadModal modal = new FileUploadModal();
+            List<File> files = modal.show(owner);
 
-        File file = fileChooser.showOpenDialog(owner);
+            if (files != null && !files.isEmpty()) {
+                handleFilesSelected(files);
+            }
 
-        if (file != null) {
-            handleFileSelected(file);
+        } catch (IOException e) {
+            throw new RuntimeException(
+                    "Failed to open file upload modal",
+                    e
+            );
         }
     }
 
@@ -94,23 +101,7 @@ public class ObjectViewerController {
             return;
         }
 
-        System.out.println("[INFO] Selected 3D file: " + file.getAbsolutePath());
-
-        try {
-            Loader loader = getLoader(file);
-            ScanMesh mesh = loader.load(file.toPath());
-            mesh = MeshNormalizer.normalize(mesh);
-
-            startRenderer(mesh, file);
-
-        } catch (Exception e) {
-            System.err.println("[ERROR] Failed to load 3D file: " + e.getMessage());
-            e.printStackTrace();
-
-            if (statusLabel != null) {
-                statusLabel.setText("Error loading file: " + e.getMessage());
-            }
-        }
+        handleFilesSelected(List.of(file));
     }
 
     private void handleFilesSelected(List<File> files) {
@@ -118,14 +109,35 @@ public class ObjectViewerController {
             return;
         }
 
+        stopRenderers();
+
+        if (emptyStateView != null) {
+            emptyStateView.setVisible(false);
+            emptyStateView.setManaged(false);
+        }
+
+        List<ScanMesh> meshes = new ArrayList<>();
+        List<File> loadedFiles = new ArrayList<>();
+
         for (File file : files) {
             try {
+                System.out.println(
+                        "[INFO] Loading 3D file: "
+                                + file.getAbsolutePath()
+                );
+
                 Loader loader = getLoader(file);
+
                 ScanMesh mesh = loader.load(file.toPath());
                 mesh = MeshNormalizer.normalize(mesh);
 
-                startRenderer(mesh, file);
-                return;
+                meshes.add(mesh);
+                loadedFiles.add(file);
+
+                System.out.println(
+                        "[INFO] Loaded: "
+                                + file.getName()
+                );
 
             } catch (Exception e) {
                 System.err.println(
@@ -134,12 +146,128 @@ public class ObjectViewerController {
                                 + ": "
                                 + e.getMessage()
                 );
+                e.printStackTrace();
             }
+        }
+
+        if (meshes.isEmpty()) {
+            updateUIState(
+                    null,
+                    "No models could be loaded."
+            );
+            return;
+        }
+
+        positionMeshes(meshes);
+
+        try {
+            RenderStrategy newRenderer =
+                    RenderStrategyFactory.createRenderer(meshes);
+
+            renderer = newRenderer;
+            renderers.add(newRenderer);
+
+            newRenderer.embedIn(viewportContainer);
+
+            if (toolboxController != null) {
+                toolboxController.setWindow(newRenderer);
+            }
+
+            int vertexCount = 0;
+            int faceCount = 0;
+
+            for (ScanMesh mesh : meshes) {
+                if (mesh.getVertices() != null) {
+                    vertexCount += mesh.getVertices().length / 3;
+                }
+
+                if (mesh.getIndices() != null) {
+                    faceCount += mesh.getIndices().length / 3;
+                }
+            }
+
+            String fileLabel;
+
+            if (loadedFiles.size() == 1) {
+                fileLabel = loadedFiles.get(0).getName();
+            } else {
+                fileLabel = loadedFiles.size() + " models loaded";
+            }
+
+            updateUIState(
+                    fileLabel,
+                    String.format(
+                            "Loaded %d of %d selected models | Vertices: %,d | Faces: %,d | Controls: Drag to rotate, Right drag to pan, Scroll to zoom",
+                            loadedFiles.size(),
+                            files.size(),
+                            vertexCount,
+                            faceCount
+                    )
+            );
+
+        } catch (Exception e) {
+            System.err.println(
+                    "[ERROR] Failed to create renderer: "
+                            + e.getMessage()
+            );
+            e.printStackTrace();
+
+            updateUIState(
+                    null,
+                    "Failed to create renderer: "
+                            + e.getMessage()
+            );
         }
     }
 
+    private void positionMeshes(List<ScanMesh> meshes) {
+        float spacing = 0.5f;
+        float currentX = 0.0f;
+
+        for (ScanMesh mesh : meshes) {
+            float width = getMeshWidth(mesh);
+
+            mesh.setPosition(
+                    currentX + width / 2.0f,
+                    0.0f,
+                    0.0f
+            );
+
+            currentX += width + spacing;
+        }
+
+        float totalWidth = currentX - spacing;
+
+        for (ScanMesh mesh : meshes) {
+            mesh.move(
+                    -totalWidth / 2.0f,
+                    0.0f,
+                    0.0f
+            );
+        }
+    }
+
+    private float getMeshWidth(ScanMesh mesh) {
+        float[] vertices = mesh.getVertices();
+
+        if (vertices == null || vertices.length < 3) {
+            return 1.0f;
+        }
+
+        float minX = vertices[0];
+        float maxX = vertices[0];
+
+        for (int i = 3; i + 2 < vertices.length; i += 3) {
+            minX = Math.min(minX, vertices[i]);
+            maxX = Math.max(maxX, vertices[i]);
+        }
+
+        return Math.max(0.5f, maxX - minX);
+    }
+
     private Loader getLoader(File file) {
-        String fileName = file.getName().toLowerCase();
+        String fileName =
+                file.getName().toLowerCase();
 
         if (fileName.endsWith(".obj")) {
             return new ObjLoader();
@@ -150,53 +278,14 @@ public class ObjectViewerController {
         }
 
         throw new IllegalArgumentException(
-                "Unsupported file format: " + fileName
-        );
-    }
-
-    private void startRenderer(ScanMesh mesh, File file) {
-        stopRenderer();
-
-        if (emptyStateView != null) {
-            emptyStateView.setVisible(false);
-            emptyStateView.setManaged(false);
-        }
-
-        RenderStrategy newRenderer =
-                RenderStrategyFactory.createRenderer(mesh);
-
-        renderer = newRenderer;
-
-        newRenderer.embedIn(viewportContainer);
-
-        if (toolboxController != null) {
-            toolboxController.setWindow(newRenderer);
-        }
-
-        int vertexCount =
-                mesh.getVertices() != null
-                        ? mesh.getVertices().length / 3
-                        : 0;
-
-        int faceCount =
-                mesh.getIndices() != null
-                        ? mesh.getIndices().length / 3
-                        : 0;
-
-        updateUIState(
-                file.getName(),
-                String.format(
-                        "Active: %s | Vertices: %,d | Faces: %,d | Controls: Drag to rotate, Right drag to pan, Scroll to zoom",
-                        file.getName(),
-                        vertexCount,
-                        faceCount
-                )
+                "Unsupported file format: "
+                        + fileName
         );
     }
 
     @FXML
     private void handleClose() {
-        stopRenderer();
+        stopRenderers();
 
         if (emptyStateView != null) {
             emptyStateView.setVisible(true);
@@ -211,31 +300,44 @@ public class ObjectViewerController {
 
     @FXML
     private void handleRefresh() {
-        if (renderer != null) {
-            renderer.refresh();
+        for (RenderStrategy currentRenderer : renderers) {
+            currentRenderer.refresh();
+        }
 
-            if (statusLabel != null) {
-                statusLabel.setText("Viewport refreshed.");
-            }
+        if (statusLabel != null) {
+            statusLabel.setText(
+                    "Viewport refreshed."
+            );
         }
     }
 
     @FXML
     private void handleResetCamera() {
-        if (renderer != null) {
-            renderer.resetCamera();
+        for (RenderStrategy currentRenderer : renderers) {
+            currentRenderer.resetCamera();
+        }
 
-            if (statusLabel != null) {
-                statusLabel.setText("Camera reset to default view.");
-            }
+        if (statusLabel != null) {
+            statusLabel.setText(
+                    "Camera reset to default view."
+            );
         }
     }
 
-    private void stopRenderer() {
-        if (renderer != null) {
-            renderer.close();
-            renderer = null;
+    private void stopRenderers() {
+        for (RenderStrategy currentRenderer : renderers) {
+            try {
+                currentRenderer.close();
+            } catch (Exception e) {
+                System.err.println(
+                        "[WARN] Failed to close renderer: "
+                                + e.getMessage()
+                );
+            }
         }
+
+        renderers.clear();
+        renderer = null;
     }
 
     private void updateUIState(
@@ -250,7 +352,8 @@ public class ObjectViewerController {
             );
         }
 
-        if (statusLabel != null && statusMessage != null) {
+        if (statusLabel != null
+                && statusMessage != null) {
             statusLabel.setText(statusMessage);
         }
     }
