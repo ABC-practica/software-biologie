@@ -55,7 +55,11 @@ public class ObjectViewerController {
 
         List<ScanMesh> meshes = new ArrayList<>();
 
-        for (File file : files) {
+        float spacing = 2.5f;
+
+        for (int i = 0; i < files.size(); i++) {
+            File file = files.get(i);
+
             try {
 
                 Loader loader =
@@ -66,6 +70,14 @@ public class ObjectViewerController {
 
                 mesh =
                         MeshNormalizer.normalize(mesh);
+
+                mesh =
+                        MeshNormalizer.translate(
+                                mesh,
+                                i * spacing,
+                                0.0f,
+                                0.0f
+                        );
 
                 meshes.add(mesh);
 
