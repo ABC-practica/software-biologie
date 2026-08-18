@@ -5,16 +5,17 @@ import javafx.scene.Parent;
 import org.abc.controller.ToolboxController;
 import org.abc.service.RendererControl;
 
-import java.io.IOException;
-import java.util.function.Consumer;
 import java.io.File;
+import java.io.IOException;
+import java.util.List;
+import java.util.function.Consumer;
 
 public class Toolbox {
 
     private ToolboxController lastController;
 
     public Parent create(
-            Consumer<File> fileSelected,
+            Consumer<List<File>> filesSelected,
             RendererControl window
     ) throws IOException {
 
@@ -29,7 +30,7 @@ public class Toolbox {
         ToolboxController controller =
                 loader.getController();
 
-        controller.setFileSelected(fileSelected);
+        controller.setFilesSelected(filesSelected);
         controller.setWindow(window);
 
         lastController = controller;

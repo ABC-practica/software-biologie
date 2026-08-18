@@ -8,6 +8,7 @@ import org.abc.service.RendererControl;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 import java.util.function.Consumer;
 
 public class ToolboxController {
@@ -15,11 +16,11 @@ public class ToolboxController {
     @FXML
     private VBox root;
 
-    private Consumer<File> fileSelected;
+    private Consumer<List<File>> filesSelected;
     private RendererControl window;
 
-    public void setFileSelected(Consumer<File> fileSelected) {
-        this.fileSelected = fileSelected;
+    public void setFilesSelected(Consumer<List<File>> filesSelected) {
+        this.filesSelected = filesSelected;
     }
 
     public void setWindow(RendererControl window) {
@@ -32,10 +33,10 @@ public class ToolboxController {
             Window owner = root.getScene().getWindow();
 
             FileUploadModal modal = new FileUploadModal();
-            File file = modal.show(owner);
+            List<File> files = modal.show(owner);
 
-            if (file != null && fileSelected != null) {
-                fileSelected.accept(file);
+            if (files != null && !files.isEmpty() && filesSelected != null) {
+                filesSelected.accept(files);
             }
 
         } catch (IOException e) {
@@ -50,7 +51,6 @@ public class ToolboxController {
     private void handleClose() {
         if (window != null) {
             window.close();
-
             window = null;
         }
     }

@@ -13,6 +13,8 @@ import org.abc.util.MeshNormalizer;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ObjectViewerController {
 
@@ -32,7 +34,7 @@ public class ObjectViewerController {
 
             toolbox.getChildren().add(
                     component.create(
-                            this::handleFileSelected,
+                            this::handleFilesSelected,
                             null
                     )
             );
@@ -49,24 +51,32 @@ public class ObjectViewerController {
         }
     }
 
-    private void handleFileSelected(File file) {
+    private void handleFilesSelected(List<File> files) {
 
-        try {
+        List<ScanMesh> meshes = new ArrayList<>();
 
-            Loader loader =
-                    getLoader(file);
+        for (File file : files) {
+            try {
 
-            ScanMesh mesh =
-                    loader.load(file.toPath());
+                Loader loader =
+                        getLoader(file);
 
-            mesh =
-                    MeshNormalizer.normalize(mesh);
+                ScanMesh mesh =
+                        loader.load(file.toPath());
 
-            startRenderer(mesh);
+                mesh =
+                        MeshNormalizer.normalize(mesh);
 
-        } catch (IOException e) {
+                meshes.add(mesh);
 
-            e.printStackTrace();
+            } catch (IOException e) {
+
+                e.printStackTrace();
+            }
+        }
+
+        if (!meshes.isEmpty()) {
+            startRenderer(meshes);
         }
     }
 
@@ -89,12 +99,12 @@ public class ObjectViewerController {
         );
     }
 
-    private void startRenderer(ScanMesh mesh) {
+    private void startRenderer(List<ScanMesh> meshes) {
 
         stopRenderer();
 
         OpenGLRenderer newRenderer =
-                new OpenGLRenderer(mesh);
+                new OpenGLRenderer(meshes);
 
         renderer = newRenderer;
 
