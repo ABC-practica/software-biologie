@@ -71,13 +71,11 @@ public class ObjectViewerController {
                 mesh =
                         MeshNormalizer.normalize(mesh);
 
-                mesh =
-                        MeshNormalizer.translate(
-                                mesh,
-                                i * spacing,
-                                0.0f,
-                                0.0f
-                        );
+                mesh.setPosition(
+                        i * spacing,
+                        0.0f,
+                        0.0f
+                );
 
                 meshes.add(mesh);
 
