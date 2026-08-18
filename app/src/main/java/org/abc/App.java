@@ -13,7 +13,6 @@ public class App extends Application {
 
     @Override
     public void start(Stage stage) throws IOException {
-
         FXMLLoader loader = new FXMLLoader(
                 App.class.getResource(
                         "/org/abc/fxml/object-viewer.fxml"
@@ -22,10 +21,16 @@ public class App extends Application {
 
         Scene scene = new Scene(loader.load());
 
-        stage.setTitle("3D Scan Toolbox");
+        scene.getStylesheets().add(
+                App.class.getResource("/org/abc/css/style.css").toExternalForm()
+        );
+
+        stage.setTitle("3D Scan Studio");
         stage.setScene(scene);
-        stage.setWidth(220);
-        stage.setHeight(300);
+        stage.setWidth(1100);
+        stage.setHeight(750);
+        stage.setMinWidth(750);
+        stage.setMinHeight(500);
 
         stage.setOnCloseRequest(event -> {
             GLFWManager.requestShutdown();

@@ -1,5 +1,7 @@
 package org.abc.service;
 
+import javafx.animation.AnimationTimer;
+import javafx.application.Platform;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.Queue;
@@ -11,6 +13,7 @@ public final class GLFWManager {
 
     private static boolean initialized = false;
     private static Thread ownerThread;
+    private static AnimationTimer animationTimer;
 
     private static final Queue<Runnable> commands =
             new ConcurrentLinkedQueue<>();
@@ -30,12 +33,6 @@ public final class GLFWManager {
 
         ownerThread = Thread.currentThread();
 
-        if (Thread.currentThread() != ownerThread) {
-            throw new IllegalStateException(
-                    "GLFW must be initialized on the JVM main thread"
-            );
-        }
-
         GLFW.glfwInitHint(
                 GLFW.GLFW_WAYLAND_LIBDECOR,
                 GLFW.GLFW_WAYLAND_DISABLE_LIBDECOR
@@ -43,57 +40,63 @@ public final class GLFWManager {
 
         if (!GLFW.glfwInit()) {
             ownerThread = null;
-
-            throw new IllegalStateException(
-                    "Unable to initialize GLFW"
-            );
+            throw new IllegalStateException("Unable to initialize GLFW");
         }
 
         initialized = true;
         shutdownRequested = false;
+
+        startEventPump();
     }
 
-    public static void runMainLoop() {
+    private static void startEventPump() {
+        if (Platform.isFxApplicationThread()) {
+            setupAnimationTimer();
+        } else {
+            Platform.runLater(GLFWManager::setupAnimationTimer);
+        }
+    }
 
-        requireOwnerThread();
+    private static void setupAnimationTimer() {
+        if (animationTimer != null) {
+            return;
+        }
 
-        while (!shutdownRequested || !renderers.isEmpty()) {
-
-            processCommands();
-
-            GLFW.glfwPollEvents();
-
-            for (OpenGLRenderer renderer : renderers) {
-
-                if (renderer.isRenderFinished()) {
-                    renderer.destroyWindowOnMainThread();
-                    renderers.remove(renderer);
-                }
+        animationTimer = new AnimationTimer() {
+            @Override
+            public void handle(long now) {
+                pollEvents();
             }
+        };
 
-            if (shutdownRequested && renderers.isEmpty()) {
-                break;
-            }
+        animationTimer.start();
+    }
 
-            Thread.yield();
+    public static void pollEvents() {
+        if (!initialized) {
+            return;
         }
 
         processCommands();
 
-        for (OpenGLRenderer renderer : renderers) {
+        GLFW.glfwPollEvents();
 
+        for (OpenGLRenderer renderer : renderers) {
             if (renderer.isRenderFinished()) {
                 renderer.destroyWindowOnMainThread();
+                renderers.remove(renderer);
             }
         }
 
-        renderers.clear();
+        if (shutdownRequested && renderers.isEmpty()) {
+            terminate();
+        }
+    }
 
-        terminate();
+    public static void runMainLoop() {
     }
 
     public static void execute(Runnable command) {
-
         commands.add(command);
 
         if (initialized) {
@@ -101,22 +104,15 @@ public final class GLFWManager {
         }
     }
 
-    public static void register(
-            OpenGLRenderer renderer
-    ) {
-        requireOwnerThread();
-
+    public static void register(OpenGLRenderer renderer) {
         renderers.add(renderer);
     }
 
-    public static void unregister(
-            OpenGLRenderer renderer
-    ) {
+    public static void unregister(OpenGLRenderer renderer) {
         renderers.remove(renderer);
     }
 
     public static void requestShutdown() {
-
         shutdownRequested = true;
 
         for (OpenGLRenderer renderer : renderers) {
@@ -129,12 +125,24 @@ public final class GLFWManager {
     }
 
     public static synchronized void terminate() {
-
         if (!initialized) {
             return;
         }
 
-        requireOwnerThread();
+        if (animationTimer != null) {
+            animationTimer.stop();
+            animationTimer = null;
+        }
+
+        processCommands();
+
+        for (OpenGLRenderer renderer : renderers) {
+            if (renderer.isRenderFinished()) {
+                renderer.destroyWindowOnMainThread();
+            }
+        }
+
+        renderers.clear();
 
         GLFW.glfwTerminate();
 
@@ -148,28 +156,16 @@ public final class GLFWManager {
 
     public static synchronized boolean isOwnerThread() {
         return initialized
-                && Thread.currentThread() == ownerThread;
+                && (ownerThread == null
+                || Thread.currentThread() == ownerThread
+                || Platform.isFxApplicationThread());
     }
 
     private static void processCommands() {
-
         Runnable command;
 
         while ((command = commands.poll()) != null) {
             command.run();
-        }
-    }
-
-    private static void requireOwnerThread() {
-
-        if (Thread.currentThread() != ownerThread) {
-            throw new IllegalStateException(
-                    "GLFW operation must run on the JVM main thread. "
-                            + "Owner: "
-                            + ownerThread
-                            + ", current: "
-                            + Thread.currentThread()
-            );
         }
     }
 }
