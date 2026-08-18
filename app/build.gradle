@@ -1,3 +1,5 @@
+import org.gradle.internal.os.OperatingSystem
+
 plugins {
     id 'java'
     id 'application'
@@ -19,7 +21,6 @@ java {
     }
 }
 
-
 javafx {
     version = '21'
     modules = [ 'javafx.controls', 'javafx.fxml' ]
@@ -37,22 +38,26 @@ dependencies {
     implementation "org.lwjgl:lwjgl:$lwjglVersion"
     implementation "org.lwjgl:lwjgl-opengl:$lwjglVersion"
     implementation "org.lwjgl:lwjgl-glfw:$lwjglVersion"
+    implementation "org.lwjgl:lwjgl-stb:$lwjglVersion"
 
+    // lwjgl
     runtimeOnly "org.lwjgl:lwjgl:$lwjglVersion:natives-windows"
     runtimeOnly "org.lwjgl:lwjgl:$lwjglVersion:natives-linux"
     runtimeOnly "org.lwjgl:lwjgl:$lwjglVersion:natives-macos"
 
+    // opengl
     runtimeOnly "org.lwjgl:lwjgl-opengl:$lwjglVersion:natives-windows"
     runtimeOnly "org.lwjgl:lwjgl-opengl:$lwjglVersion:natives-linux"
     runtimeOnly "org.lwjgl:lwjgl-opengl:$lwjglVersion:natives-macos"
 
+    // glfw
     runtimeOnly "org.lwjgl:lwjgl-glfw:$lwjglVersion:natives-windows"
     runtimeOnly "org.lwjgl:lwjgl-glfw:$lwjglVersion:natives-linux"
     runtimeOnly "org.lwjgl:lwjgl-glfw:$lwjglVersion:natives-macos"
 
-    implementation "org.lwjgl:lwjgl-stb:$lwjglVersion"
-    runtimeOnly "org.lwjgl:lwjgl-stb:$lwjglVersion:natives-linux"
+    // stb
     runtimeOnly "org.lwjgl:lwjgl-stb:$lwjglVersion:natives-windows"
+    runtimeOnly "org.lwjgl:lwjgl-stb:$lwjglVersion:natives-linux"
     runtimeOnly "org.lwjgl:lwjgl-stb:$lwjglVersion:natives-macos"
 }
 
