@@ -1,6 +1,7 @@
 package org.abc.controller;
 
 import javafx.fxml.FXML;
+import javafx.scene.control.ToggleButton;
 import javafx.scene.layout.VBox;
 import javafx.stage.Window;
 import org.abc.component.FileUploadModal;
@@ -16,6 +17,12 @@ public class ToolboxController {
     @FXML
     private VBox root;
 
+    @FXML
+    private ToggleButton objectRotationToggle;
+
+    @FXML
+    private ToggleButton axesToggle;
+
     private Consumer<List<File>> filesSelected;
     private RendererControl window;
 
@@ -25,6 +32,10 @@ public class ToolboxController {
 
     public void setWindow(RendererControl window) {
         this.window = window;
+
+        if (window != null) {
+            updateToggleState();
+        }
     }
 
     @FXML
@@ -66,6 +77,42 @@ public class ToolboxController {
     private void handleResetCamera() {
         if (window != null) {
             window.resetCamera();
+        }
+    }
+
+    @FXML
+    private void handleToggleObjectRotation() {
+        if (window == null) {
+            return;
+        }
+
+        boolean enabled = objectRotationToggle.isSelected();
+
+        window.setObjectRotationEnabled(enabled);
+    }
+
+    @FXML
+    private void handleToggleAxes() {
+        if (window == null) {
+            return;
+        }
+
+        boolean enabled = axesToggle.isSelected();
+
+        window.setAxesVisible(enabled);
+    }
+
+    private void updateToggleState() {
+        if (objectRotationToggle != null) {
+            objectRotationToggle.setSelected(
+                    window.isObjectRotationEnabled()
+            );
+        }
+
+        if (axesToggle != null) {
+            axesToggle.setSelected(
+                    window.isAxesVisible()
+            );
         }
     }
 }

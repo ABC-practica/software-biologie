@@ -197,7 +197,7 @@ public class ObjectViewerController {
             updateUIState(
                     fileLabel,
                     String.format(
-                            "Loaded %d of %d selected models | Vertices: %,d | Faces: %,d | Controls: Drag to rotate, Right drag to pan, Scroll to zoom",
+                            "Loaded %d of %d selected models | Vertices: %,d | Faces: %,d | Left drag: rotate object, Right drag: pan, Scroll: zoom",
                             loadedFiles.size(),
                             files.size(),
                             vertexCount,
