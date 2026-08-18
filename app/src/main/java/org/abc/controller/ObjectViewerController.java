@@ -6,7 +6,8 @@ import org.abc.component.Toolbox;
 import org.abc.model.ScanMesh;
 import org.abc.service.Loader;
 import org.abc.service.ObjLoader;
-import org.abc.service.OpenGLRenderer;
+import org.abc.service.RenderStrategy;
+import org.abc.service.RenderStrategyFactory;
 import org.abc.service.RendererControl;
 import org.abc.service.ThreeMfLoader;
 import org.abc.util.MeshNormalizer;
@@ -19,17 +20,16 @@ public class ObjectViewerController {
     @FXML
     private VBox toolbox;
 
-    private RendererControl renderer;
+    private RenderStrategy renderer;
 
     private ToolboxController toolboxController;
 
     @FXML
     private void initialize() {
-
+        System.out.println("[INFO] ObjectViewerController initializing...");
         Toolbox component = new Toolbox();
 
         try {
-
             toolbox.getChildren().add(
                     component.create(
                             this::handleFileSelected,
@@ -40,8 +40,9 @@ public class ObjectViewerController {
             toolboxController =
                     component.getController();
 
+            System.out.println("[INFO] ObjectViewerController initialized successfully.");
         } catch (IOException e) {
-
+            System.err.println("[ERROR] Failed to load toolbox component: " + e.getMessage());
             throw new RuntimeException(
                     "Failed to load toolbox",
                     e
@@ -50,9 +51,8 @@ public class ObjectViewerController {
     }
 
     private void handleFileSelected(File file) {
-
+        System.out.println("[INFO] Selected 3D file: " + (file != null ? file.getAbsolutePath() : "null"));
         try {
-
             Loader loader =
                     getLoader(file);
 
@@ -93,8 +93,8 @@ public class ObjectViewerController {
 
         stopRenderer();
 
-        OpenGLRenderer newRenderer =
-                new OpenGLRenderer(mesh);
+        RenderStrategy newRenderer =
+                RenderStrategyFactory.createRenderer(mesh);
 
         renderer = newRenderer;
 
