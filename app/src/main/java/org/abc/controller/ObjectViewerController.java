@@ -42,6 +42,7 @@ public class ObjectViewerController {
     private final List<RenderStrategy> renderers = new ArrayList<>();
 
     private ToolboxController toolboxController;
+    private ScanMesh skeletonMesh;
 
     @FXML
     private void initialize() {
@@ -69,11 +70,80 @@ public class ObjectViewerController {
                 );
             }
         }
-
-        updateUIState(
-                null,
-                "System Ready. No model loaded."
-        );
+        
+        // Preload skeleton
+        preloadSkeleton();
+    }
+    
+    private void preloadSkeleton() {
+        try {
+            String skeletonPath = "org/abc/models/skeleton.obj";
+            var resource = getClass().getClassLoader().getResource(skeletonPath);
+            
+            if (resource != null) {
+                File skeletonFile = new File(resource.getPath());
+                if (skeletonFile.exists()) {
+                    System.out.println("[INFO] Preloading skeleton from: " + skeletonFile.getAbsolutePath());
+                    
+                    Loader loader = new ObjLoader();
+                    skeletonMesh = loader.load(skeletonFile.toPath());
+                    skeletonMesh = MeshNormalizer.normalize(skeletonMesh);
+                    skeletonMesh.setLocked(true); // Mark as locked (non-editable)
+                    
+                    List<ScanMesh> meshes = new ArrayList<>();
+                    meshes.add(skeletonMesh);
+                    
+                    try {
+                        RenderStrategy newRenderer = RenderStrategyFactory.createRenderer(meshes);
+                        renderer = newRenderer;
+                        renderers.add(newRenderer);
+                        newRenderer.embedIn(viewportContainer);
+                        
+                        if (toolboxController != null) {
+                            toolboxController.setWindow(newRenderer);
+                        }
+                        
+                        if (emptyStateView != null) {
+                            emptyStateView.setVisible(false);
+                            emptyStateView.setManaged(false);
+                        }
+                        
+                        updateUIState(
+                                "skeleton.obj",
+                                "Skeleton preloaded. Ready for additional models."
+                        );
+                        
+                        System.out.println("[INFO] Skeleton preloaded successfully.");
+                    } catch (Exception e) {
+                        System.err.println("[ERROR] Failed to render preloaded skeleton: " + e.getMessage());
+                        e.printStackTrace();
+                        updateUIState(
+                                null,
+                                "System Ready. No model loaded."
+                        );
+                    }
+                } else {
+                    System.out.println("[WARNING] Skeleton file not found at: " + skeletonFile.getAbsolutePath());
+                    updateUIState(
+                            null,
+                            "System Ready. No model loaded."
+                    );
+                }
+            } else {
+                System.out.println("[WARNING] Skeleton resource not found.");
+                updateUIState(
+                        null,
+                        "System Ready. No model loaded."
+                );
+            }
+        } catch (Exception e) {
+            System.err.println("[ERROR] Failed to preload skeleton: " + e.getMessage());
+            e.printStackTrace();
+            updateUIState(
+                    null,
+                    "System Ready. No model loaded."
+            );
+        }
     }
 
     @FXML
@@ -159,6 +229,11 @@ public class ObjectViewerController {
         }
 
         positionMeshes(meshes);
+        
+        // Add skeleton to the meshes if it was preloaded
+        if (skeletonMesh != null) {
+            meshes.add(0, skeletonMesh);
+        }
 
         try {
             RenderStrategy newRenderer =

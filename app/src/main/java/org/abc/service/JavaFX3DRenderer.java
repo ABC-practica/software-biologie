@@ -26,10 +26,14 @@ import java.util.List;
 public class JavaFX3DRenderer implements RenderStrategy {
 
     private final List<ScanMesh> scanMeshes;
+    private final List<ScanMesh> lockedMeshes = new ArrayList<>();
+    private final List<ScanMesh> editableMeshes = new ArrayList<>();
 
     private Stage stage;
     private SubScene subScene;
     private Pane embeddedContainer;
+    private Group lockedMeshGroup;
+    private Group editableMeshGroup;
 
     private volatile float cameraDistance = 3.5f;
     private volatile float positionX = 0.0f;
@@ -64,6 +68,15 @@ public class JavaFX3DRenderer implements RenderStrategy {
         }
 
         this.scanMeshes = new ArrayList<>(scanMeshes);
+        
+        // Separate locked and editable meshes
+        for (ScanMesh mesh : scanMeshes) {
+            if (mesh.isLocked()) {
+                lockedMeshes.add(mesh);
+            } else {
+                editableMeshes.add(mesh);
+            }
+        }
     }
 
     @Override
@@ -142,21 +155,29 @@ public class JavaFX3DRenderer implements RenderStrategy {
     }
 
     private Group buildSceneRoot(PerspectiveCamera camera) {
-        List<Node> nodes = new ArrayList<>();
-
-        for (ScanMesh scanMesh : scanMeshes) {
+        // Build locked meshes (no transforms applied)
+        List<Node> lockedNodes = new ArrayList<>();
+        for (ScanMesh scanMesh : lockedMeshes) {
             TriangleMesh mesh = buildTriangleMesh(scanMesh);
             MeshView meshView = new MeshView(mesh);
+            meshView.setMaterial(buildMaterial(scanMesh));
+            lockedNodes.add(meshView);
+        }
+        
+        lockedMeshGroup = new Group();
+        lockedMeshGroup.getChildren().addAll(lockedNodes);
 
-            meshView.setMaterial(
-                    buildMaterial(scanMesh)
-            );
-
-            nodes.add(meshView);
+        // Build editable meshes (transforms applied)
+        List<Node> editableNodes = new ArrayList<>();
+        for (ScanMesh scanMesh : editableMeshes) {
+            TriangleMesh mesh = buildTriangleMesh(scanMesh);
+            MeshView meshView = new MeshView(mesh);
+            meshView.setMaterial(buildMaterial(scanMesh));
+            editableNodes.add(meshView);
         }
 
-        Group meshGroup = new Group();
-        meshGroup.getChildren().addAll(nodes);
+        editableMeshGroup = new Group();
+        editableMeshGroup.getChildren().addAll(editableNodes);
 
         rxTransform = new Rotate(rotationX, Rotate.X_AXIS);
         ryTransform = new Rotate(rotationY, Rotate.Y_AXIS);
@@ -167,7 +188,7 @@ public class JavaFX3DRenderer implements RenderStrategy {
                 positionZ
         );
 
-        meshGroup.getTransforms().addAll(
+        editableMeshGroup.getTransforms().addAll(
                 rxTransform,
                 ryTransform,
                 rzTransform,
@@ -185,7 +206,8 @@ public class JavaFX3DRenderer implements RenderStrategy {
         pointLight.setTranslateZ(-4.0);
 
         return new Group(
-                meshGroup,
+                lockedMeshGroup,
+                editableMeshGroup,
                 ambientLight,
                 pointLight,
                 camera

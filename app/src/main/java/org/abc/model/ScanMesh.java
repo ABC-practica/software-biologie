@@ -16,6 +16,7 @@ public class ScanMesh {
     private float rotationZ;
 
     private float scale = 1.0f;
+    private boolean locked = false;
 
     public ScanMesh(
             float[] vertices,
@@ -128,5 +129,13 @@ public class ScanMesh {
 
     public void setScale(float scale) {
         this.scale = scale;
+    }
+
+    public boolean isLocked() {
+        return locked;
+    }
+
+    public void setLocked(boolean locked) {
+        this.locked = locked;
     }
 }
