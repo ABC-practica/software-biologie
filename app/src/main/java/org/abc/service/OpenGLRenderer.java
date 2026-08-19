@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
         Renderer, Rotatable, Runnable, Zoomable {
@@ -44,12 +45,12 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
     private Thread renderThread;
 
     public OpenGLRenderer(List<ScanMesh> objects) {
-        this.objects = objects;
+        this.objects = new CopyOnWriteArrayList<>(objects);
         if (!objects.isEmpty()) selectedObject = objects.get(0);
     }
 
     public OpenGLRenderer(ScanMesh object) {
-        this.objects = List.of(object);
+        this.objects = new CopyOnWriteArrayList<>(List.of(object));
         selectedObject = object;
     }
 
@@ -688,5 +689,29 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
     @Override
     public boolean isObjectScalingEnabled() {
         return objectScalingMode;
+    }
+
+    @Override
+    public void addMeshes(List<ScanMesh> meshes) {
+        if (meshes == null || meshes.isEmpty()) {
+            return;
+        }
+
+        objects.addAll(meshes);
+
+        commands.add(() -> {
+            for (ScanMesh object : meshes) {
+                Material[] materials = object.getVertexMaterials();
+                if (materials == null) continue;
+
+                for (Material material : materials) {
+                    if (material == null || !material.hasTexture()) continue;
+
+                    Texture texture = material.getTexture();
+                    if (!textureIds.containsKey(texture))
+                        textureIds.put(texture, createTexture(texture));
+                }
+            }
+        });
     }
 }

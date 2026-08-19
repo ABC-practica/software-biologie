@@ -179,7 +179,10 @@ public class ObjectViewerController {
             return;
         }
 
-        stopRenderers();
+        boolean rendererExists = renderer != null && !renderers.isEmpty();
+        if (!rendererExists) {
+            stopRenderers();
+        }
 
         if (emptyStateView != null) {
             emptyStateView.setVisible(false);
@@ -236,60 +239,100 @@ public class ObjectViewerController {
         }
 
         try {
-            RenderStrategy newRenderer =
-                    RenderStrategyFactory.createRenderer(meshes);
+            if (rendererExists && renderer != null) {
+                System.out.println(
+                        "[INFO] Adding meshes to existing renderer"
+                );
 
-            renderer = newRenderer;
-            renderers.add(newRenderer);
+                renderer.addMeshes(meshes);
 
-            newRenderer.embedIn(viewportContainer);
+                int vertexCount = 0;
+                int faceCount = 0;
 
-            if (toolboxController != null) {
-                toolboxController.setWindow(newRenderer);
-            }
+                for (ScanMesh mesh : meshes) {
+                    if (mesh.getVertices() != null) {
+                        vertexCount += mesh.getVertices().length / 3;
+                    }
 
-            int vertexCount = 0;
-            int faceCount = 0;
-
-            for (ScanMesh mesh : meshes) {
-                if (mesh.getVertices() != null) {
-                    vertexCount += mesh.getVertices().length / 3;
+                    if (mesh.getIndices() != null) {
+                        faceCount += mesh.getIndices().length / 3;
+                    }
                 }
 
-                if (mesh.getIndices() != null) {
-                    faceCount += mesh.getIndices().length / 3;
+                String fileLabel;
+
+                if (loadedFiles.size() == 1) {
+                    fileLabel = loadedFiles.get(0).getName();
+                } else {
+                    fileLabel = loadedFiles.size() + " models added";
                 }
-            }
 
-            String fileLabel;
+                updateUIState(
+                        fileLabel,
+                        String.format(
+                                "Added %d models | Vertices: %,d | Faces: %,d | Left drag: rotate object, Right drag: pan, Scroll: zoom",
+                                loadedFiles.size(),
+                                vertexCount,
+                                faceCount
+                        )
+                );
 
-            if (loadedFiles.size() == 1) {
-                fileLabel = loadedFiles.get(0).getName();
             } else {
-                fileLabel = loadedFiles.size() + " models loaded";
-            }
+                RenderStrategy newRenderer =
+                        RenderStrategyFactory.createRenderer(meshes);
 
-            updateUIState(
-                    fileLabel,
-                    String.format(
-                            "Loaded %d of %d selected models | Vertices: %,d | Faces: %,d | Left drag: rotate object, Right drag: pan, Scroll: zoom",
-                            loadedFiles.size(),
-                            files.size(),
-                            vertexCount,
-                            faceCount
-                    )
-            );
+                renderer = newRenderer;
+                renderers.add(newRenderer);
+
+                newRenderer.embedIn(viewportContainer);
+
+                if (toolboxController != null) {
+                    toolboxController.setWindow(newRenderer);
+                }
+
+                int vertexCount = 0;
+                int faceCount = 0;
+
+                for (ScanMesh mesh : meshes) {
+                    if (mesh.getVertices() != null) {
+                        vertexCount += mesh.getVertices().length / 3;
+                    }
+
+                    if (mesh.getIndices() != null) {
+                        faceCount += mesh.getIndices().length / 3;
+                    }
+                }
+
+                String fileLabel;
+
+                if (loadedFiles.size() == 1) {
+                    fileLabel = loadedFiles.get(0).getName();
+                } else {
+                    fileLabel = loadedFiles.size() + " models loaded";
+                }
+
+                updateUIState(
+                        fileLabel,
+                        String.format(
+                                "Loaded %d of %d selected models | Vertices: %,d | Faces: %,d | Left drag: rotate object, Right drag: pan, Scroll: zoom",
+                                loadedFiles.size(),
+                                files.size(),
+                                vertexCount,
+                                faceCount
+                        )
+                );
+            }
 
         } catch (Exception e) {
             System.err.println(
-                    "[ERROR] Failed to create renderer: "
+                    "[ERROR] Failed to process renderer: "
                             + e.getMessage()
             );
             e.printStackTrace();
 
             updateUIState(
                     null,
-                    "Failed to create renderer: "
+                    "Failed to process renderer: "
                             + e.getMessage()
             );
         }
