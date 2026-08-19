@@ -547,4 +547,46 @@ public class JavaFX3DRenderer implements RenderStrategy {
     public boolean isObjectScalingEnabled() {
         return objectScalingMode;
     }
+
+    @Override
+    public void addMeshes(List<ScanMesh> meshes) {
+        if (meshes == null || meshes.isEmpty()) {
+            return;
+        }
+
+        Runnable addTask = () -> {
+            scanMeshes.addAll(meshes);
+
+            if (subScene != null) {
+                Group root = (Group) subScene.getRoot();
+                Group meshGroup = (Group) root.getChildren().get(0);
+
+                for (ScanMesh scanMesh : meshes) {
+                    TriangleMesh mesh = buildTriangleMesh(scanMesh);
+                    MeshView meshView = new MeshView(mesh);
+                    meshView.setMaterial(buildMaterial(scanMesh));
+                    meshGroup.getChildren().add(meshView);
+                }
+            } else if (stage != null) {
+                Scene scene = stage.getScene();
+                if (scene != null) {
+                    Group root = (Group) scene.getRoot();
+                    Group meshGroup = (Group) root.getChildren().get(0);
+
+                    for (ScanMesh scanMesh : meshes) {
+                        TriangleMesh mesh = buildTriangleMesh(scanMesh);
+                        MeshView meshView = new MeshView(mesh);
+                        meshView.setMaterial(buildMaterial(scanMesh));
+                        meshGroup.getChildren().add(meshView);
+                    }
+                }
+            }
+        };
+
+        if (Platform.isFxApplicationThread()) {
+            addTask.run();
+        } else {
+            Platform.runLater(addTask);
+        }
+    }
 }

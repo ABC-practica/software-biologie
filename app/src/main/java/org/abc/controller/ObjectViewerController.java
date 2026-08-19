@@ -109,7 +109,10 @@ public class ObjectViewerController {
             return;
         }
 
+        boolean rendererExists = renderer != null && !renderers.isEmpty();
+        if (!rendererExists) {
         stopRenderers();
+        }
 
         if (emptyStateView != null) {
             emptyStateView.setVisible(false);
@@ -161,6 +164,45 @@ public class ObjectViewerController {
         positionMeshes(meshes);
 
         try {
+if (rendererExists && renderer != null) {
+                System.out.println(
+                        "[INFO] Adding meshes to existing renderer"
+                );
+
+                renderer.addMeshes(meshes);
+
+                int vertexCount = 0;
+                int faceCount = 0;
+
+                for (ScanMesh mesh : meshes) {
+                    if (mesh.getVertices() != null) {
+                        vertexCount += mesh.getVertices().length / 3;
+                    }
+
+                    if (mesh.getIndices() != null) {
+                        faceCount += mesh.getIndices().length / 3;
+                    }
+                }
+
+                String fileLabel;
+
+                if (loadedFiles.size() == 1) {
+                    fileLabel = loadedFiles.get(0).getName();
+                } else {
+                    fileLabel = loadedFiles.size() + " models added";
+                }
+
+                updateUIState(
+                        fileLabel,
+                        String.format(
+                                "Added %d models | Vertices: %,d | Faces: %,d | Left drag: rotate object, Right drag: pan, Scroll: zoom",
+                                loadedFiles.size(),
+                                vertexCount,
+                                faceCount
+                        )
+                );
+
+            } else {
             RenderStrategy newRenderer =
                     RenderStrategyFactory.createRenderer(meshes);
 
@@ -204,17 +246,18 @@ public class ObjectViewerController {
                             faceCount
                     )
             );
+            }
 
         } catch (Exception e) {
             System.err.println(
-                    "[ERROR] Failed to create renderer: "
+                    "[ERROR] Failed to process renderer: "
                             + e.getMessage()
             );
             e.printStackTrace();
 
             updateUIState(
                     null,
-                    "Failed to create renderer: "
+                    "Failed to process renderer: "
                             + e.getMessage()
             );
         }
