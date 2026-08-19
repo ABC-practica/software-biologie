@@ -33,6 +33,7 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
     private double lastMouseX, lastMouseY, mousePressX, mousePressY;
     private volatile boolean rotating, moving, running, renderFinished;
     private volatile boolean objectRotationMode;
+    private volatile boolean axesVisible;
 
     private final List<ScanMesh> objects;
     private volatile ScanMesh selectedObject;
@@ -60,7 +61,7 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
     }
 
     @Override
-    public void setObjectRotationMode(boolean enabled) {
+    public void setObjectRotationEnabled(boolean enabled) {
         objectRotationMode = enabled;
     }
 
@@ -206,7 +207,7 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
         float py = selectedObject != null ? selectedObject.getPositionY() : 0;
         float pz = selectedObject != null ? selectedObject.getPositionZ() : 0;
 
-        float[] point = rotate(object.getPositionX() - px,
+        float[] point = rotatePoint(object.getPositionX() - px,
                 object.getPositionY() - py,
                 object.getPositionZ() - pz);
 
@@ -245,14 +246,14 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
         float py = selectedObject != null ? selectedObject.getPositionY() : 0;
         float pz = selectedObject != null ? selectedObject.getPositionZ() : 0;
 
-        float[] point = rotate(object.getPositionX() - px,
+        float[] point = rotatePoint(object.getPositionX() - px,
                 object.getPositionY() - py,
                 object.getPositionZ() - pz);
 
         return -(point[2] + pz + positionZ - cameraDistance);
     }
 
-    private float[] rotate(float x, float y, float z) {
+    private float[] rotatePoint(float x, float y, float z) {
         double ax = Math.toRadians(rotationX);
         double ay = Math.toRadians(rotationY);
         double az = Math.toRadians(rotationZ);
@@ -655,5 +656,20 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
         rotationX += x;
         rotationY += y;
         rotationZ += z;
+    }
+
+    @Override
+    public boolean isObjectRotationEnabled() {
+        return objectRotationMode;
+    }
+
+    @Override
+    public void setAxesVisible(boolean visible) {
+        axesVisible = visible;
+    }
+
+    @Override
+    public boolean isAxesVisible() {
+        return axesVisible;
     }
 }

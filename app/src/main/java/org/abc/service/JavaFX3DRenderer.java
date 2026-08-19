@@ -39,6 +39,8 @@ public class JavaFX3DRenderer implements RenderStrategy {
     private volatile float rotationX = 25.0f;
     private volatile float rotationY = 35.0f;
     private volatile float rotationZ = 0.0f;
+    private volatile boolean objectRotationMode;
+    private volatile boolean axesVisible;
 
     private double lastMouseX;
     private double lastMouseY;
@@ -506,5 +508,25 @@ public class JavaFX3DRenderer implements RenderStrategy {
 
     public Stage getStage() {
         return stage;
+    }
+
+    @Override
+    public void setObjectRotationEnabled(boolean enabled) {
+        objectRotationMode = enabled;
+    }
+
+    @Override
+    public boolean isObjectRotationEnabled() {
+        return objectRotationMode;
+    }
+
+    @Override
+    public void setAxesVisible(boolean visible) {
+        axesVisible = visible;
+    }
+
+    @Override
+    public boolean isAxesVisible() {
+        return axesVisible;
     }
 }

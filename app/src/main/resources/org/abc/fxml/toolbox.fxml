@@ -2,6 +2,7 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ToggleButton?>
 <?import javafx.scene.layout.VBox?>
 
 <VBox xmlns:fx="http://javafx.com/fxml"
@@ -28,6 +29,16 @@
     <Button text="Reset Camera"
             maxWidth="Infinity"
             onAction="#handleResetCamera"/>
+
+    <ToggleButton fx:id="objectRotationToggle"
+                  text="Object Rotation"
+                  maxWidth="Infinity"
+                  onAction="#handleToggleObjectRotation"/>
+
+    <ToggleButton fx:id="axesToggle"
+                  text="Show Axes"
+                  maxWidth="Infinity"
+                  onAction="#handleToggleAxes"/>
 
     <Button text="Close Renderer"
             maxWidth="Infinity"

@@ -14,7 +14,7 @@
             prefWidth="1100"
             prefHeight="750">
 
-    <top>
+    <!-- <top>
         <HBox styleClass="toolbar-container">
             <HBox styleClass="app-branding">
                 <Label text="3D Scan Studio" styleClass="app-logo-text"/>
@@ -44,7 +44,7 @@
                    text="No model loaded"
                    styleClass="active-file-label"/>
         </HBox>
-    </top>
+    </top> -->
 
     <center>
         <StackPane fx:id="viewportContainer" styleClass="viewport-box">
@@ -74,5 +74,15 @@
             <Label text="JavaFX 3D Engine" styleClass="status-tip"/>
         </HBox>
     </bottom>
+
+    <right>
+        <VBox fx:id="toolbox"
+              styleClass="toolbox-container"
+              prefWidth="200">
+            <BorderPane.margin>
+                <Insets top="10" right="12" bottom="10" left="0"/>
+            </BorderPane.margin>
+        </VBox>
+    </right>
 
 </BorderPane>
