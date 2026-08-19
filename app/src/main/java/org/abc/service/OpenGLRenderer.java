@@ -46,12 +46,18 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
 
     public OpenGLRenderer(List<ScanMesh> objects) {
         this.objects = new CopyOnWriteArrayList<>(objects);
-        if (!objects.isEmpty()) selectedObject = objects.get(0);
+        // Select first editable (non-locked) object by default
+        for (ScanMesh o : objects) {
+            if (!o.isLocked()) {
+                selectedObject = o;
+                break;
+            }
+        }
     }
 
     public OpenGLRenderer(ScanMesh object) {
         this.objects = new CopyOnWriteArrayList<>(List.of(object));
-        selectedObject = object;
+        if (!object.isLocked()) selectedObject = object;
     }
 
     public ScanMesh getSelectedObject() {
@@ -59,7 +65,7 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
     }
 
     public void setSelectedObject(ScanMesh object) {
-        if (objects.contains(object)) selectedObject = object;
+        if (objects.contains(object) && !object.isLocked()) selectedObject = object;
     }
 
     @Override
@@ -112,7 +118,7 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
         GLFW.glfwSetScrollCallback(window,
                 (w, x, y) -> {
                     float amount = (float) -Math.signum(y) * .15f;
-                    if (objectScalingMode && selectedObject != null)
+                    if (objectScalingMode && selectedObject != null && !selectedObject.isLocked())
                         selectedObject.setScale(selectedObject.getScale() + amount);
                     else
                         zoom(amount);
@@ -124,7 +130,7 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
                 return;
             }
 
-            if (selectedObject == null ||
+                if (selectedObject == null || selectedObject.isLocked() ||
                     (action != GLFW.GLFW_PRESS && action != GLFW.GLFW_REPEAT)) return;
 
             float amount = .05f;
@@ -174,7 +180,7 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
             float dy = (float) (y - lastMouseY);
 
             if (rotating) {
-                if (objectRotationMode && selectedObject != null)
+                if (objectRotationMode && selectedObject != null && !selectedObject.isLocked())
                     selectedObject.rotate(-dy * .5f, dx * .5f, 0);
                 else
                     rotate(-dy * .5f, dx * .5f, 0);
@@ -194,6 +200,7 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
         double closestDistance = Double.MAX_VALUE;
 
         for (ScanMesh object : objects) {
+            if (object.isLocked()) continue;
             double[] screen = projectObjectCenter(object);
             if (screen == null) continue;
 

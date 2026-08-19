@@ -165,7 +165,6 @@ public class ObjectViewerController {
             );
         }
     }
-
     public void handleFileSelected(File file) {
         if (file == null) {
             return;
@@ -179,17 +178,12 @@ public class ObjectViewerController {
             return;
         }
 
-        boolean rendererExists = renderer != null && !renderers.isEmpty();
-        if (!rendererExists) {
-            stopRenderers();
-        }
-
         if (emptyStateView != null) {
             emptyStateView.setVisible(false);
             emptyStateView.setManaged(false);
         }
 
-        List<ScanMesh> meshes = new ArrayList<>();
+        List<ScanMesh> userMeshes = new ArrayList<>();
         List<File> loadedFiles = new ArrayList<>();
 
         for (File file : files) {
@@ -204,7 +198,7 @@ public class ObjectViewerController {
                 ScanMesh mesh = loader.load(file.toPath());
                 mesh = MeshNormalizer.normalize(mesh);
 
-                meshes.add(mesh);
+                userMeshes.add(mesh);
                 loadedFiles.add(file);
 
                 System.out.println(
@@ -223,7 +217,7 @@ public class ObjectViewerController {
             }
         }
 
-        if (meshes.isEmpty()) {
+        if (userMeshes.isEmpty()) {
             updateUIState(
                     null,
                     "No models could be loaded."
@@ -231,55 +225,26 @@ public class ObjectViewerController {
             return;
         }
 
-        positionMeshes(meshes);
-        
-        // Add skeleton to the meshes if it was preloaded
-        if (skeletonMesh != null) {
-            meshes.add(0, skeletonMesh);
-        }
+        // Position only the uploaded meshes so skeleton remains fixed
+        positionMeshes(userMeshes);
 
         try {
-            if (rendererExists && renderer != null) {
-                System.out.println(
-                        "[INFO] Adding meshes to existing renderer"
-                );
+            if (renderer != null) {
+                renderer.addMeshes(userMeshes);
 
-                renderer.addMeshes(meshes);
-
-                int vertexCount = 0;
-                int faceCount = 0;
-
-                for (ScanMesh mesh : meshes) {
-                    if (mesh.getVertices() != null) {
-                        vertexCount += mesh.getVertices().length / 3;
-                    }
-
-                    if (mesh.getIndices() != null) {
-                        faceCount += mesh.getIndices().length / 3;
-                    }
+                if (toolboxController != null) {
+                    toolboxController.setWindow(renderer);
                 }
-
-                String fileLabel;
-
-                if (loadedFiles.size() == 1) {
-                    fileLabel = loadedFiles.get(0).getName();
-                } else {
-                    fileLabel = loadedFiles.size() + " models added";
-                }
-
-                updateUIState(
-                        fileLabel,
-                        String.format(
-                                "Added %d models | Vertices: %,d | Faces: %,d | Left drag: rotate object, Right drag: pan, Scroll: zoom",
-                                loadedFiles.size(),
-                                vertexCount,
-                                faceCount
-                        )
-                );
 
             } else {
-                RenderStrategy newRenderer =
-                        RenderStrategyFactory.createRenderer(meshes);
+                List<ScanMesh> renderMeshes = new ArrayList<>();
+                if (skeletonMesh != null) {
+                    renderMeshes.add(skeletonMesh);
+                }
+
+                renderMeshes.addAll(userMeshes);
+
+                RenderStrategy newRenderer = RenderStrategyFactory.createRenderer(renderMeshes);
 
                 renderer = newRenderer;
                 renderers.add(newRenderer);
@@ -290,38 +255,43 @@ public class ObjectViewerController {
                     toolboxController.setWindow(newRenderer);
                 }
 
-                int vertexCount = 0;
-                int faceCount = 0;
-
-                for (ScanMesh mesh : meshes) {
-                    if (mesh.getVertices() != null) {
-                        vertexCount += mesh.getVertices().length / 3;
-                    }
-
-                    if (mesh.getIndices() != null) {
-                        faceCount += mesh.getIndices().length / 3;
-                    }
+                if (emptyStateView != null) {
+                    emptyStateView.setVisible(false);
+                    emptyStateView.setManaged(false);
                 }
-
-                String fileLabel;
-
-                if (loadedFiles.size() == 1) {
-                    fileLabel = loadedFiles.get(0).getName();
-                } else {
-                    fileLabel = loadedFiles.size() + " models loaded";
-                }
-
-                updateUIState(
-                        fileLabel,
-                        String.format(
-                                "Loaded %d of %d selected models | Vertices: %,d | Faces: %,d | Left drag: rotate object, Right drag: pan, Scroll: zoom",
-                                loadedFiles.size(),
-                                files.size(),
-                                vertexCount,
-                                faceCount
-                        )
-                );
             }
+
+            int vertexCount = 0;
+            int faceCount = 0;
+
+            for (ScanMesh mesh : userMeshes) {
+                if (mesh.getVertices() != null) {
+                    vertexCount += mesh.getVertices().length / 3;
+                }
+
+                if (mesh.getIndices() != null) {
+                    faceCount += mesh.getIndices().length / 3;
+                }
+            }
+
+            String fileLabel;
+
+            if (loadedFiles.size() == 1) {
+                fileLabel = loadedFiles.get(0).getName();
+            } else {
+                fileLabel = loadedFiles.size() + " models loaded";
+            }
+
+            updateUIState(
+                    fileLabel,
+                    String.format(
+                            "Loaded %d of %d selected models | Vertices: %,d | Faces: %,d | Left drag: rotate object, Right drag: pan, Scroll: zoom",
+                            loadedFiles.size(),
+                            files.size(),
+                            vertexCount,
+                            faceCount
+                    )
+            );
 
         } catch (Exception e) {
             System.err.println(

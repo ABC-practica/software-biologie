@@ -57,7 +57,14 @@ public class JavaFX3DRenderer implements RenderStrategy {
     private Translate cameraTranslate;
 
     public JavaFX3DRenderer(ScanMesh scanMesh) {
-        this.scanMeshes = List.of(scanMesh);
+        this.scanMeshes = new ArrayList<>();
+        this.scanMeshes.add(scanMesh);
+
+        if (scanMesh.isLocked()) {
+            this.lockedMeshes.add(scanMesh);
+        } else {
+            this.editableMeshes.add(scanMesh);
+        }
     }
 
     public JavaFX3DRenderer(List<ScanMesh> scanMeshes) {
@@ -161,6 +168,10 @@ public class JavaFX3DRenderer implements RenderStrategy {
             TriangleMesh mesh = buildTriangleMesh(scanMesh);
             MeshView meshView = new MeshView(mesh);
             meshView.setMaterial(buildMaterial(scanMesh));
+            // Make locked meshes non-interactive and semi-transparent
+            meshView.setMouseTransparent(true);
+            meshView.setPickOnBounds(false);
+            meshView.setOpacity(0.35);
             lockedNodes.add(meshView);
         }
         
@@ -265,10 +276,13 @@ public class JavaFX3DRenderer implements RenderStrategy {
                     float amount = (float) -Math.signum(
                             event.getDeltaY()
                     ) * 0.15f;
-                    
-                    if (objectScalingMode && !scanMeshes.isEmpty()) {
-                        ScanMesh firstMesh = scanMeshes.get(0);
+
+                    // Only scale editable meshes, never locked/reference meshes
+                    if (objectScalingMode && !editableMeshes.isEmpty()) {
+                        ScanMesh firstMesh = editableMeshes.get(0);
                         firstMesh.setScale(Math.max(0.1f, firstMesh.getScale() + amount));
+                        // We don't call updateTransforms on locked meshes so they stay unchanged
+                        updateTransforms();
                     } else {
                         zoom(amount);
                     }
@@ -577,31 +591,53 @@ public class JavaFX3DRenderer implements RenderStrategy {
         }
 
         Runnable addTask = () -> {
+            // Add to master list and to editable meshes (locked meshes remain separate)
             scanMeshes.addAll(meshes);
-
-            if (subScene != null) {
-                Group root = (Group) subScene.getRoot();
-                Group meshGroup = (Group) root.getChildren().get(0);
-
-                for (ScanMesh scanMesh : meshes) {
-                    TriangleMesh mesh = buildTriangleMesh(scanMesh);
-                    MeshView meshView = new MeshView(mesh);
-                    meshView.setMaterial(buildMaterial(scanMesh));
-                    meshGroup.getChildren().add(meshView);
+            for (ScanMesh m : meshes) {
+                if (m.isLocked()) {
+                    lockedMeshes.add(m);
+                } else {
+                    editableMeshes.add(m);
                 }
-            } else if (stage != null) {
-                Scene scene = stage.getScene();
-                if (scene != null) {
-                    Group root = (Group) scene.getRoot();
-                    Group meshGroup = (Group) root.getChildren().get(0);
+            }
 
-                    for (ScanMesh scanMesh : meshes) {
-                        TriangleMesh mesh = buildTriangleMesh(scanMesh);
-                        MeshView meshView = new MeshView(mesh);
-                        meshView.setMaterial(buildMaterial(scanMesh));
-                        meshGroup.getChildren().add(meshView);
+            // Add MeshView nodes to the editable mesh group so locked/reference meshes stay untouched
+            Runnable uiAdd = () -> {
+                Group root = null;
+                if (subScene != null) {
+                    root = (Group) subScene.getRoot();
+                } else if (stage != null && stage.getScene() != null) {
+                    root = (Group) stage.getScene().getRoot();
+                }
+
+                if (root != null) {
+                    // editableMeshGroup should have been created in buildSceneRoot
+                    if (editableMeshGroup == null) {
+                        // Fallback: find second child if layout differs
+                        if (root.getChildren().size() > 1 && root.getChildren().get(1) instanceof Group) {
+                            editableMeshGroup = (Group) root.getChildren().get(1);
+                        }
+                    }
+
+                    if (editableMeshGroup != null) {
+                        for (ScanMesh scanMesh : meshes) {
+                            if (scanMesh.isLocked()) {
+                                continue;
+                            }
+
+                            TriangleMesh mesh = buildTriangleMesh(scanMesh);
+                            MeshView meshView = new MeshView(mesh);
+                            meshView.setMaterial(buildMaterial(scanMesh));
+                            editableMeshGroup.getChildren().add(meshView);
+                        }
                     }
                 }
+            };
+
+            if (Platform.isFxApplicationThread()) {
+                uiAdd.run();
+            } else {
+                Platform.runLater(uiAdd);
             }
         };
 
