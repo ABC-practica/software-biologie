@@ -111,7 +111,7 @@ public class ObjectViewerController {
 
         boolean rendererExists = renderer != null && !renderers.isEmpty();
         if (!rendererExists) {
-        stopRenderers();
+            stopRenderers();
         }
 
         if (emptyStateView != null) {
@@ -164,7 +164,7 @@ public class ObjectViewerController {
         positionMeshes(meshes);
 
         try {
-if (rendererExists && renderer != null) {
+            if (rendererExists && renderer != null) {
                 System.out.println(
                         "[INFO] Adding meshes to existing renderer"
                 );
@@ -203,49 +203,49 @@ if (rendererExists && renderer != null) {
                 );
 
             } else {
-            RenderStrategy newRenderer =
-                    RenderStrategyFactory.createRenderer(meshes);
+                RenderStrategy newRenderer =
+                        RenderStrategyFactory.createRenderer(meshes);
 
-            renderer = newRenderer;
-            renderers.add(newRenderer);
+                renderer = newRenderer;
+                renderers.add(newRenderer);
 
-            newRenderer.embedIn(viewportContainer);
+                newRenderer.embedIn(viewportContainer);
 
-            if (toolboxController != null) {
-                toolboxController.setWindow(newRenderer);
-            }
-
-            int vertexCount = 0;
-            int faceCount = 0;
-
-            for (ScanMesh mesh : meshes) {
-                if (mesh.getVertices() != null) {
-                    vertexCount += mesh.getVertices().length / 3;
+                if (toolboxController != null) {
+                    toolboxController.setWindow(newRenderer);
                 }
 
-                if (mesh.getIndices() != null) {
-                    faceCount += mesh.getIndices().length / 3;
+                int vertexCount = 0;
+                int faceCount = 0;
+
+                for (ScanMesh mesh : meshes) {
+                    if (mesh.getVertices() != null) {
+                        vertexCount += mesh.getVertices().length / 3;
+                    }
+
+                    if (mesh.getIndices() != null) {
+                        faceCount += mesh.getIndices().length / 3;
+                    }
                 }
-            }
 
-            String fileLabel;
+                String fileLabel;
 
-            if (loadedFiles.size() == 1) {
-                fileLabel = loadedFiles.get(0).getName();
-            } else {
-                fileLabel = loadedFiles.size() + " models loaded";
-            }
+                if (loadedFiles.size() == 1) {
+                    fileLabel = loadedFiles.get(0).getName();
+                } else {
+                    fileLabel = loadedFiles.size() + " models loaded";
+                }
 
-            updateUIState(
-                    fileLabel,
-                    String.format(
-                            "Loaded %d of %d selected models | Vertices: %,d | Faces: %,d | Left drag: rotate object, Right drag: pan, Scroll: zoom",
-                            loadedFiles.size(),
-                            files.size(),
-                            vertexCount,
-                            faceCount
-                    )
-            );
+                updateUIState(
+                        fileLabel,
+                        String.format(
+                                "Loaded %d of %d selected models | Vertices: %,d | Faces: %,d | Left drag: rotate object, Right drag: pan, Scroll: zoom",
+                                loadedFiles.size(),
+                                files.size(),
+                                vertexCount,
+                                faceCount
+                        )
+                );
             }
 
         } catch (Exception e) {
