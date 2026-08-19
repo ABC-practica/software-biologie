@@ -19,4 +19,8 @@ public interface RendererControl {
     void setAxesVisible(boolean visible);
 
     boolean isAxesVisible();
+
+    void setObjectScalingEnabled(boolean enabled);
+
+    boolean isObjectScalingEnabled();
 }

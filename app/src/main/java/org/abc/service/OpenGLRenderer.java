@@ -34,6 +34,7 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
     private volatile boolean rotating, moving, running, renderFinished;
     private volatile boolean objectRotationMode;
     private volatile boolean axesVisible;
+    private volatile boolean objectScalingMode;
 
     private final List<ScanMesh> objects;
     private volatile ScanMesh selectedObject;
@@ -108,7 +109,13 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
         });
 
         GLFW.glfwSetScrollCallback(window,
-                (w, x, y) -> zoom((float) -Math.signum(y) * .15f));
+                (w, x, y) -> {
+                    float amount = (float) -Math.signum(y) * .15f;
+                    if (objectScalingMode && selectedObject != null)
+                        selectedObject.setScale(selectedObject.getScale() + amount);
+                    else
+                        zoom(amount);
+                });
 
         GLFW.glfwSetKeyCallback(window, (w, key, scancode, action, mods) -> {
             if (key == GLFW.GLFW_KEY_ESCAPE && action == GLFW.GLFW_PRESS) {
@@ -671,5 +678,15 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
     @Override
     public boolean isAxesVisible() {
         return axesVisible;
+    }
+
+    @Override
+    public void setObjectScalingEnabled(boolean enabled) {
+        objectScalingMode = enabled;
+    }
+
+    @Override
+    public boolean isObjectScalingEnabled() {
+        return objectScalingMode;
     }
 }

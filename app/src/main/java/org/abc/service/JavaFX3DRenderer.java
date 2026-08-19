@@ -41,6 +41,7 @@ public class JavaFX3DRenderer implements RenderStrategy {
     private volatile float rotationZ = 0.0f;
     private volatile boolean objectRotationMode;
     private volatile boolean axesVisible;
+    private volatile boolean objectScalingMode;
 
     private double lastMouseX;
     private double lastMouseY;
@@ -238,11 +239,18 @@ public class JavaFX3DRenderer implements RenderStrategy {
         });
 
         node.setOnScroll(
-                event -> zoom(
-                        (float) -Math.signum(
-                                event.getDeltaY()
-                        ) * 0.15f
-                )
+                event -> {
+                    float amount = (float) -Math.signum(
+                            event.getDeltaY()
+                    ) * 0.15f;
+                    
+                    if (objectScalingMode && !scanMeshes.isEmpty()) {
+                        ScanMesh firstMesh = scanMeshes.get(0);
+                        firstMesh.setScale(Math.max(0.1f, firstMesh.getScale() + amount));
+                    } else {
+                        zoom(amount);
+                    }
+                }
         );
     }
 
@@ -528,5 +536,15 @@ public class JavaFX3DRenderer implements RenderStrategy {
     @Override
     public boolean isAxesVisible() {
         return axesVisible;
+    }
+
+    @Override
+    public void setObjectScalingEnabled(boolean enabled) {
+        objectScalingMode = enabled;
+    }
+
+    @Override
+    public boolean isObjectScalingEnabled() {
+        return objectScalingMode;
     }
 }

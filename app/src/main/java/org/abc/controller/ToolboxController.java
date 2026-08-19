@@ -21,7 +21,7 @@ public class ToolboxController {
     private ToggleButton objectRotationToggle;
 
     @FXML
-    private ToggleButton axesToggle;
+    private ToggleButton objectScalingToggle;
 
     private Consumer<List<File>> filesSelected;
     private RendererControl window;
@@ -92,14 +92,14 @@ public class ToolboxController {
     }
 
     @FXML
-    private void handleToggleAxes() {
+    private void handleToggleObjectScaling() {
         if (window == null) {
             return;
         }
 
-        boolean enabled = axesToggle.isSelected();
+        boolean enabled = objectScalingToggle.isSelected();
 
-        window.setAxesVisible(enabled);
+        window.setObjectScalingEnabled(enabled);
     }
 
     private void updateToggleState() {
@@ -109,9 +109,9 @@ public class ToolboxController {
             );
         }
 
-        if (axesToggle != null) {
-            axesToggle.setSelected(
-                    window.isAxesVisible()
+        if (objectScalingToggle != null) {
+            objectScalingToggle.setSelected(
+                    window.isObjectScalingEnabled()
             );
         }
     }

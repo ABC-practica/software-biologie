@@ -35,10 +35,10 @@
                   maxWidth="Infinity"
                   onAction="#handleToggleObjectRotation"/>
 
-    <ToggleButton fx:id="axesToggle"
-                  text="Show Axes"
+    <ToggleButton fx:id="objectScalingToggle"
+                  text="Object Scaling"
                   maxWidth="Infinity"
-                  onAction="#handleToggleAxes"/>
+                  onAction="#handleToggleObjectScaling"/>
 
     <Button text="Close Renderer"
             maxWidth="Infinity"
