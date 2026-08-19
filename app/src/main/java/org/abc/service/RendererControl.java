@@ -11,4 +11,16 @@ public interface RendererControl {
     void resetCamera();
 
     void refresh();
+
+    void setObjectRotationEnabled(boolean enabled);
+
+    boolean isObjectRotationEnabled();
+
+    void setAxesVisible(boolean visible);
+
+    boolean isAxesVisible();
+
+    void setObjectScalingEnabled(boolean enabled);
+
+    boolean isObjectScalingEnabled();
 }
