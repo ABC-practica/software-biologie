@@ -1,17 +1,21 @@
 package org.abc.service;
 
+import org.abc.model.BoneData;
 import org.abc.model.Material;
 import org.abc.model.ScanMesh;
 import org.abc.model.Texture;
 import org.abc.util.LightNormalizer;
+import org.abc.util.SkeletonJsonLoader;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.stb.STBImage;
 import org.lwjgl.system.MemoryStack;
 
+import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,11 +40,13 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
     private volatile boolean objectRotationMode;
     private volatile boolean axesVisible;
     private volatile boolean objectScalingMode;
+    private volatile boolean boneLabelsVisible = false;
 
     private final List<ScanMesh> objects;
     private volatile ScanMesh selectedObject;
     private final Map<Texture, Integer> textureIds = new HashMap<>();
     private final Queue<Runnable> commands = new ConcurrentLinkedQueue<>();
+    private List<BoneData> boneDataList = new ArrayList<>();
 
     private Thread renderThread;
 
@@ -53,11 +59,13 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
                 break;
             }
         }
+        loadBoneData();
     }
 
     public OpenGLRenderer(ScanMesh object) {
         this.objects = new CopyOnWriteArrayList<>(List.of(object));
         if (!object.isLocked()) selectedObject = object;
+        loadBoneData();
     }
 
     public ScanMesh getSelectedObject() {
@@ -396,6 +404,7 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
 
         for (ScanMesh object : objects) drawObject(object);
         if (objectRotationMode && selectedObject != null) drawRotationAxis(selectedObject);
+        renderBoneLabels();
 
         GLFW.glfwSwapBuffers(window);
     }
@@ -696,6 +705,95 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
     @Override
     public boolean isObjectScalingEnabled() {
         return objectScalingMode;
+    }
+
+    @Override
+    public void setBoneLabelsVisible(boolean visible) {
+        boneLabelsVisible = visible;
+    }
+
+    @Override
+    public boolean isBoneLabelsVisible() {
+        return boneLabelsVisible;
+    }
+
+    private void loadBoneData() {
+        try {
+            String skeletonJsonPath = "org/abc/models/skeleton.json";
+            var resource = getClass().getClassLoader().getResource(skeletonJsonPath);
+
+            if (resource != null) {
+                File skeletonJsonFile = new File(resource.getPath());
+                if (skeletonJsonFile.exists()) {
+                    boneDataList = SkeletonJsonLoader.loadBoneData(skeletonJsonFile);
+                    System.out.println("[INFO] Loaded " + boneDataList.size() + " bone labels for OpenGL renderer");
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("[ERROR] Failed to load bone labels in OpenGL renderer: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private void renderBoneLabels() {
+        if (!boneLabelsVisible || boneDataList.isEmpty()) {
+            return;
+        }
+
+        // Save current matrix state
+        GL11.glPushMatrix();
+        GL11.glDisable(GL11.GL_LIGHTING);
+        GL11.glDisable(GL11.GL_TEXTURE_2D);
+        GL11.glColor3f(1.0f, 0.84f, 0.0f); // Gold color for labels
+
+        for (BoneData bone : boneDataList) {
+            float[] center = bone.getBboxCenter();
+            if (center != null && center.length >= 3) {
+                // Draw a small sphere at bone center
+                GL11.glPushMatrix();
+                GL11.glTranslatef(center[0], center[1], center[2]);
+                drawSphere(0.02f, 8, 8);
+                GL11.glPopMatrix();
+
+                // Draw bone name as text using raster
+                GL11.glRasterPos3f(center[0], center[1] + 0.05f, center[2]);
+                renderString(bone.getName());
+            }
+        }
+
+        GL11.glEnable(GL11.GL_TEXTURE_2D);
+        GL11.glEnable(GL11.GL_LIGHTING);
+        GL11.glPopMatrix();
+    }
+
+    private void drawSphere(float radius, int slices, int stacks) {
+        for (int i = 0; i < stacks; i++) {
+            float lat0 = (float) Math.PI * (-0.5f + (float) i / stacks);
+            float lat1 = (float) Math.PI * (-0.5f + (float) (i + 1) / stacks);
+
+            float z0 = (float) Math.sin(lat0) * radius;
+            float z1 = (float) Math.sin(lat1) * radius;
+            float r0 = (float) Math.cos(lat0) * radius;
+            float r1 = (float) Math.cos(lat1) * radius;
+
+            GL11.glBegin(GL11.GL_TRIANGLE_STRIP);
+            for (int j = 0; j <= slices; j++) {
+                float lng = 2 * (float) Math.PI * (float) j / slices;
+                float x = (float) Math.cos(lng);
+                float y = (float) Math.sin(lng);
+
+                GL11.glVertex3f(x * r1, y * r1, z1);
+                GL11.glVertex3f(x * r0, y * r0, z0);
+            }
+            GL11.glEnd();
+        }
+    }
+
+    private void renderString(String str) {
+        byte[] bytes = str.getBytes();
+        for (byte b : bytes) {
+            GL11.glCallList(b);
+        }
     }
 
     @Override

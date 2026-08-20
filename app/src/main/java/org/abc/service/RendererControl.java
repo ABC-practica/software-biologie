@@ -23,4 +23,8 @@ public interface RendererControl {
     void setObjectScalingEnabled(boolean enabled);
 
     boolean isObjectScalingEnabled();
+
+    void setBoneLabelsVisible(boolean visible);
+
+    boolean isBoneLabelsVisible();
 }

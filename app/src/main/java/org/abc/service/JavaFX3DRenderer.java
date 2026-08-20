@@ -14,12 +14,16 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.MeshView;
 import javafx.scene.shape.TriangleMesh;
+import javafx.scene.text.Text;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Translate;
 import javafx.stage.Stage;
+import org.abc.model.BoneData;
 import org.abc.model.Material;
 import org.abc.model.ScanMesh;
+import org.abc.util.SkeletonJsonLoader;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -46,6 +50,7 @@ public class JavaFX3DRenderer implements RenderStrategy {
     private volatile boolean objectRotationMode;
     private volatile boolean axesVisible;
     private volatile boolean objectScalingMode;
+    private volatile boolean boneLabelsVisible = false;
 
     private double lastMouseX;
     private double lastMouseY;
@@ -55,6 +60,8 @@ public class JavaFX3DRenderer implements RenderStrategy {
     private Rotate rzTransform;
     private Translate tTransform;
     private Translate cameraTranslate;
+
+    private Group boneLabelsGroup;
 
     public JavaFX3DRenderer(ScanMesh scanMesh) {
         this.scanMeshes = new ArrayList<>();
@@ -216,11 +223,18 @@ public class JavaFX3DRenderer implements RenderStrategy {
         pointLight.setTranslateY(-3.0);
         pointLight.setTranslateZ(-4.0);
 
+        boneLabelsGroup = new Group();
+        
+        if (!lockedMeshes.isEmpty()) {
+            loadBoneLabels();
+        }
+
         return new Group(
                 lockedMeshGroup,
                 editableMeshGroup,
                 ambientLight,
                 pointLight,
+                boneLabelsGroup,
                 camera
         );
     }
@@ -582,6 +596,66 @@ public class JavaFX3DRenderer implements RenderStrategy {
     @Override
     public boolean isObjectScalingEnabled() {
         return objectScalingMode;
+    }
+
+    private void loadBoneLabels() {
+        try {
+            String skeletonJsonPath = "org/abc/models/skeleton.json";
+            var resource = getClass().getClassLoader().getResource(skeletonJsonPath);
+
+            if (resource != null) {
+                File skeletonJsonFile = new File(resource.getPath());
+                if (skeletonJsonFile.exists()) {
+                    List<BoneData> bones = SkeletonJsonLoader.loadBoneData(skeletonJsonFile);
+
+                    for (BoneData bone : bones) {
+                        float[] center = bone.getBboxCenter();
+                        if (center != null && center.length >= 3) {
+                            Text label = createBoneLabel(bone.getName(), center[0], center[1], center[2]);
+                            boneLabelsGroup.getChildren().add(label);
+                        }
+                    }
+
+                    System.out.println("[INFO] Loaded " + bones.size() + " bone labels");
+                    boneLabelsGroup.setVisible(boneLabelsVisible);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("[ERROR] Failed to load bone labels: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private Text createBoneLabel(String boneName, float x, float y, float z) {
+        Text text = new Text(boneName);
+        text.setTranslateX(x);
+        text.setTranslateY(y);
+        text.setTranslateZ(z);
+        text.setStyle("-fx-font-size: 10px; -fx-fill: #FFD700;");
+        text.setPickOnBounds(false);
+        return text;
+    }
+
+    @Override
+    public void setBoneLabelsVisible(boolean visible) {
+        boneLabelsVisible = visible;
+
+        Runnable updateTask = () -> {
+            if (boneLabelsGroup != null) {
+                boneLabelsGroup.setVisible(visible);
+            }
+        };
+
+        if (Platform.isFxApplicationThread()) {
+            updateTask.run();
+        } else {
+            Platform.runLater(updateTask);
+        }
+    }
+
+    @Override
+    public boolean isBoneLabelsVisible() {
+        return boneLabelsVisible;
     }
 
     @Override

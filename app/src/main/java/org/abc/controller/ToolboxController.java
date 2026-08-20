@@ -23,6 +23,9 @@ public class ToolboxController {
     @FXML
     private ToggleButton objectScalingToggle;
 
+    @FXML
+    private ToggleButton boneLabelsToggle;
+
     private Consumer<List<File>> filesSelected;
     private RendererControl window;
 
@@ -102,6 +105,17 @@ public class ToolboxController {
         window.setObjectScalingEnabled(enabled);
     }
 
+    @FXML
+    private void handleToggleBoneLabels() {
+        if (window == null) {
+            return;
+        }
+
+        boolean enabled = boneLabelsToggle.isSelected();
+
+        window.setBoneLabelsVisible(enabled);
+    }
+
     private void updateToggleState() {
         if (objectRotationToggle != null) {
             objectRotationToggle.setSelected(
@@ -112,6 +126,12 @@ public class ToolboxController {
         if (objectScalingToggle != null) {
             objectScalingToggle.setSelected(
                     window.isObjectScalingEnabled()
+            );
+        }
+
+        if (boneLabelsToggle != null) {
+            boneLabelsToggle.setSelected(
+                    window.isBoneLabelsVisible()
             );
         }
     }

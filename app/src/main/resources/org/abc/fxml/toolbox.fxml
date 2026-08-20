@@ -40,6 +40,11 @@
                   maxWidth="Infinity"
                   onAction="#handleToggleObjectScaling"/>
 
+    <ToggleButton fx:id="boneLabelsToggle"
+                  text="Show Bone Labels"
+                  maxWidth="Infinity"
+                  onAction="#handleToggleBoneLabels"/>
+
     <Button text="Close Renderer"
             maxWidth="Infinity"
             onAction="#handleClose"/>
