@@ -39,10 +39,13 @@ public class ObjectViewerController {
 
     private RenderStrategy renderer;
 
-    private final List<RenderStrategy> renderers = new ArrayList<>();
+    private final List<RenderStrategy> renderers =
+            new ArrayList<>();
 
     private ToolboxController toolboxController;
     private ScanMesh skeletonMesh;
+
+    private MeshNormalizer.NormalizationData skeletonNormalizationData;
 
     @FXML
     private void initialize() {
@@ -70,75 +73,72 @@ public class ObjectViewerController {
                 );
             }
         }
-        
-        // Preload skeleton
+
         preloadSkeleton();
     }
-    
+
     private void preloadSkeleton() {
         try {
-            String skeletonPath = "org/abc/models/skeleton.obj";
-            var resource = getClass().getClassLoader().getResource(skeletonPath);
-            
-            if (resource != null) {
-                File skeletonFile = new File(resource.getPath());
-                if (skeletonFile.exists()) {
-                    System.out.println("[INFO] Preloading skeleton from: " + skeletonFile.getAbsolutePath());
-                    
-                    Loader loader = new ObjLoader();
-                    skeletonMesh = loader.load(skeletonFile.toPath());
-                    skeletonMesh = MeshNormalizer.normalize(skeletonMesh);
-                    skeletonMesh.setLocked(true); // Mark as locked (non-editable)
-                    
-                    List<ScanMesh> meshes = new ArrayList<>();
-                    meshes.add(skeletonMesh);
-                    
-                    try {
-                        RenderStrategy newRenderer = RenderStrategyFactory.createRenderer(meshes);
-                        renderer = newRenderer;
-                        renderers.add(newRenderer);
-                        newRenderer.embedIn(viewportContainer);
-                        
-                        if (toolboxController != null) {
-                            toolboxController.setWindow(newRenderer);
-                        }
-                        
-                        if (emptyStateView != null) {
-                            emptyStateView.setVisible(false);
-                            emptyStateView.setManaged(false);
-                        }
-                        
-                        updateUIState(
-                                "skeleton.obj",
-                                "Skeleton preloaded. Ready for additional models."
-                        );
-                        
-                        System.out.println("[INFO] Skeleton preloaded successfully.");
-                    } catch (Exception e) {
-                        System.err.println("[ERROR] Failed to render preloaded skeleton: " + e.getMessage());
-                        e.printStackTrace();
-                        updateUIState(
-                                null,
-                                "System Ready. No model loaded."
-                        );
-                    }
-                } else {
-                    System.out.println("[WARNING] Skeleton file not found at: " + skeletonFile.getAbsolutePath());
-                    updateUIState(
-                            null,
-                            "System Ready. No model loaded."
-                    );
-                }
-            } else {
-                System.out.println("[WARNING] Skeleton resource not found.");
+            String path = "org/abc/models/skeleton.obj";
+            var resource = getClass()
+                    .getClassLoader()
+                    .getResource(path);
+
+            if (resource == null) {
                 updateUIState(
                         null,
                         "System Ready. No model loaded."
                 );
+                return;
             }
+
+            File file = new File(resource.toURI());
+
+            Loader loader = new ObjLoader();
+            ScanMesh rawSkeleton = loader.load(file.toPath());
+
+            MeshNormalizer.NormalizedMesh normalized =
+                    MeshNormalizer.normalizeWithData(rawSkeleton);
+
+            skeletonMesh = normalized.getMesh();
+            skeletonNormalizationData = normalized.getData();
+
+            skeletonMesh.setLocked(true);
+
+            RenderStrategy newRenderer =
+                    RenderStrategyFactory.createRenderer(
+                            List.of(skeletonMesh)
+                    );
+
+            renderer = newRenderer;
+            renderers.add(newRenderer);
+            newRenderer.embedIn(viewportContainer);
+
+            if (toolboxController != null) {
+                toolboxController.setWindow(newRenderer);
+            }
+
+            if (emptyStateView != null) {
+                emptyStateView.setVisible(false);
+                emptyStateView.setManaged(false);
+            }
+
+            updateUIState(
+                    "skeleton.obj",
+                    "Skeleton preloaded. Ready for additional models."
+            );
+
+            System.out.println(
+                    "[INFO] Skeleton preloaded successfully."
+            );
+
         } catch (Exception e) {
-            System.err.println("[ERROR] Failed to preload skeleton: " + e.getMessage());
+            System.err.println(
+                    "[ERROR] Failed to preload skeleton: "
+                            + e.getMessage()
+            );
             e.printStackTrace();
+
             updateUIState(
                     null,
                     "System Ready. No model loaded."
@@ -149,7 +149,8 @@ public class ObjectViewerController {
     @FXML
     private void handleUpload() {
         try {
-            Window owner = viewportContainer.getScene().getWindow();
+            Window owner =
+                    viewportContainer.getScene().getWindow();
 
             FileUploadModal modal = new FileUploadModal();
             List<File> files = modal.show(owner);
@@ -165,6 +166,7 @@ public class ObjectViewerController {
             );
         }
     }
+
     public void handleFileSelected(File file) {
         if (file == null) {
             return;
@@ -194,9 +196,16 @@ public class ObjectViewerController {
                 );
 
                 Loader loader = getLoader(file);
-
                 ScanMesh mesh = loader.load(file.toPath());
-                mesh = MeshNormalizer.normalize(mesh);
+
+                if (skeletonNormalizationData != null) {
+                    mesh = MeshNormalizer.normalize(
+                            mesh,
+                            skeletonNormalizationData
+                    );
+                } else {
+                    mesh = MeshNormalizer.normalize(mesh);
+                }
 
                 userMeshes.add(mesh);
                 loadedFiles.add(file);
@@ -225,7 +234,6 @@ public class ObjectViewerController {
             return;
         }
 
-        // Position only the uploaded meshes so skeleton remains fixed
         positionMeshes(userMeshes);
 
         try {
@@ -237,18 +245,22 @@ public class ObjectViewerController {
                 }
 
             } else {
-                List<ScanMesh> renderMeshes = new ArrayList<>();
+                List<ScanMesh> renderMeshes =
+                        new ArrayList<>();
+
                 if (skeletonMesh != null) {
                     renderMeshes.add(skeletonMesh);
                 }
 
                 renderMeshes.addAll(userMeshes);
 
-                RenderStrategy newRenderer = RenderStrategyFactory.createRenderer(renderMeshes);
+                RenderStrategy newRenderer =
+                        RenderStrategyFactory.createRenderer(
+                                renderMeshes
+                        );
 
                 renderer = newRenderer;
                 renderers.add(newRenderer);
-
                 newRenderer.embedIn(viewportContainer);
 
                 if (toolboxController != null) {
@@ -279,7 +291,9 @@ public class ObjectViewerController {
             if (loadedFiles.size() == 1) {
                 fileLabel = loadedFiles.get(0).getName();
             } else {
-                fileLabel = loadedFiles.size() + " models loaded";
+                fileLabel =
+                        loadedFiles.size()
+                                + " models loaded";
             }
 
             updateUIState(
@@ -350,7 +364,10 @@ public class ObjectViewerController {
             maxX = Math.max(maxX, vertices[i]);
         }
 
-        return Math.max(0.5f, maxX - minX);
+        return Math.max(
+                0.5f,
+                maxX - minX
+        );
     }
 
     private Loader getLoader(File file) {
@@ -442,7 +459,10 @@ public class ObjectViewerController {
 
         if (statusLabel != null
                 && statusMessage != null) {
-            statusLabel.setText(statusMessage);
+
+            statusLabel.setText(
+                    statusMessage
+            );
         }
     }
 

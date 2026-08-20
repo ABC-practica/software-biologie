@@ -1,12 +1,18 @@
 package org.abc.model;
 
 public class BoneData {
-    private String name;
-    private float[] bboxMin;
-    private float[] bboxMax;
-    private float[] bboxCenter;
 
-    public BoneData(String name, float[] bboxMin, float[] bboxMax, float[] bboxCenter) {
+    private final String name;
+    private final float[] bboxMin;
+    private final float[] bboxMax;
+    private final float[] bboxCenter;
+
+    public BoneData(
+            String name,
+            float[] bboxMin,
+            float[] bboxMax,
+            float[] bboxCenter
+    ) {
         this.name = name;
         this.bboxMin = bboxMin;
         this.bboxMax = bboxMax;
