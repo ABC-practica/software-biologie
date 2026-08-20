@@ -12,6 +12,11 @@ import org.lwjgl.opengl.GL11;
 import org.lwjgl.stb.STBImage;
 import org.lwjgl.system.MemoryStack;
 
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
@@ -67,6 +72,7 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
     private final Queue<Runnable> commands = new ConcurrentLinkedQueue<>();
 
     private List<BoneData> boneDataList = new ArrayList<>();
+    private volatile BoneData hoveredBone;
     private Thread renderThread;
 
     public OpenGLRenderer(List<ScanMesh> objects) {
@@ -121,8 +127,7 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
 
     private void createWindowOnMainThread() {
         if (!GLFWManager.isOwnerThread()) {
-            throw new IllegalStateException(
-                    "GLFW window creation must happen on the JVM main thread");
+            throw new IllegalStateException("GLFW window creation must happen on the JVM main thread");
         }
 
         if (window != 0) {
@@ -132,13 +137,7 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
         GLFW.glfwDefaultWindowHints();
         GLFW.glfwWindowHint(GLFW.GLFW_VISIBLE, GLFW.GLFW_FALSE);
 
-        window = GLFW.glfwCreateWindow(
-                windowWidth,
-                windowHeight,
-                "3D Renderer",
-                0,
-                0
-        );
+        window = GLFW.glfwCreateWindow(windowWidth, windowHeight, "3D Renderer", 0, 0);
 
         if (window == 0) {
             throw new IllegalStateException("Unable to create GLFW window");
@@ -167,15 +166,8 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
         GLFW.glfwSetScrollCallback(window, (w, x, y) -> {
             float amount = (float) -Math.signum(y) * .15f;
 
-            if (objectScalingMode
-                    && selectedObject != null
-                    && !selectedObject.isLocked()) {
-
-                selectedObject.setScale(Math.max(
-                        .01f,
-                        selectedObject.getScale() + amount
-                ));
-
+            if (objectScalingMode && selectedObject != null && !selectedObject.isLocked()) {
+                selectedObject.setScale(Math.max(.01f, selectedObject.getScale() + amount));
                 debugSelectedObjectTransform();
             } else {
                 zoom(amount);
@@ -188,28 +180,20 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
                 return;
             }
 
-            if (selectedObject == null
-                    || selectedObject.isLocked()
-                    || (action != GLFW.GLFW_PRESS
-                    && action != GLFW.GLFW_REPEAT)) {
+            if (selectedObject == null || selectedObject.isLocked()
+                    || (action != GLFW.GLFW_PRESS && action != GLFW.GLFW_REPEAT)) {
                 return;
             }
 
             float amount = .05f;
 
             switch (key) {
-                case GLFW.GLFW_KEY_LEFT ->
-                        selectedObject.move(-amount, 0, 0);
-                case GLFW.GLFW_KEY_RIGHT ->
-                        selectedObject.move(amount, 0, 0);
-                case GLFW.GLFW_KEY_UP ->
-                        selectedObject.move(0, amount, 0);
-                case GLFW.GLFW_KEY_DOWN ->
-                        selectedObject.move(0, -amount, 0);
-                case GLFW.GLFW_KEY_PAGE_UP ->
-                        selectedObject.move(0, 0, amount);
-                case GLFW.GLFW_KEY_PAGE_DOWN ->
-                        selectedObject.move(0, 0, -amount);
+                case GLFW.GLFW_KEY_LEFT -> selectedObject.move(-amount, 0, 0);
+                case GLFW.GLFW_KEY_RIGHT -> selectedObject.move(amount, 0, 0);
+                case GLFW.GLFW_KEY_UP -> selectedObject.move(0, amount, 0);
+                case GLFW.GLFW_KEY_DOWN -> selectedObject.move(0, -amount, 0);
+                case GLFW.GLFW_KEY_PAGE_UP -> selectedObject.move(0, 0, amount);
+                case GLFW.GLFW_KEY_PAGE_DOWN -> selectedObject.move(0, 0, -amount);
                 default -> {
                     return;
                 }
@@ -236,10 +220,7 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
 
                     GLFW.glfwGetCursorPos(window, x, y);
 
-                    if (Math.hypot(
-                            x[0] - mousePressX,
-                            y[0] - mousePressY
-                    ) < 5) {
+                    if (Math.hypot(x[0] - mousePressX, y[0] - mousePressY) < 5) {
                         selectObjectAt(x[0], y[0]);
                     }
                 }
@@ -261,17 +242,13 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
             float dx = (float) (x - lastMouseX);
             float dy = (float) (y - lastMouseY);
 
+            if (!rotating && !moving) {
+                updateHoveredBone(x, y);
+            }
+
             if (rotating) {
-                if (objectRotationMode
-                        && selectedObject != null
-                        && !selectedObject.isLocked()) {
-
-                    selectedObject.rotate(
-                            -dy * .5f,
-                            dx * .5f,
-                            0
-                    );
-
+                if (objectRotationMode && selectedObject != null && !selectedObject.isLocked()) {
+                    selectedObject.rotate(-dy * .5f, dx * .5f, 0);
                     debugSelectedObjectTransform();
                 } else {
                     rotate(-dy * .5f, dx * .5f, 0);
@@ -304,18 +281,8 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
                 continue;
             }
 
-            double distance = Math.hypot(
-                    screen[0] - mouseX,
-                    screen[1] - mouseY
-            );
-
-            double radius = Math.max(
-                    20,
-                    calculateProjectedRadius(
-                            object,
-                            calculateMarkerSize(object)
-                    )
-            );
+            double distance = Math.hypot(screen[0] - mouseX, screen[1] - mouseY);
+            double radius = Math.max(20, calculateProjectedRadius(object, calculateMarkerSize(object)));
 
             if (distance <= radius && distance < closestDistance) {
                 closest = object;
@@ -330,17 +297,9 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
     }
 
     private double[] projectObjectCenter(ScanMesh object) {
-        float px = selectedObject != null
-                ? selectedObject.getPositionX()
-                : 0;
-
-        float py = selectedObject != null
-                ? selectedObject.getPositionY()
-                : 0;
-
-        float pz = selectedObject != null
-                ? selectedObject.getPositionZ()
-                : 0;
+        float px = selectedObject != null ? selectedObject.getPositionX() : 0;
+        float py = selectedObject != null ? selectedObject.getPositionY() : 0;
+        float pz = selectedObject != null ? selectedObject.getPositionZ() : 0;
 
         float[] point = rotatePoint(
                 object.getPositionX() - px,
@@ -356,7 +315,7 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
             return null;
         }
 
-        float aspect = (float) windowWidth / Math.max(1, windowHeight);
+        float aspect = (float) framebufferWidth / Math.max(1, framebufferHeight);
         float tan = (float) Math.tan(Math.toRadians(60) / 2);
 
         double ndcX = cameraX / (-cameraZ * tan * aspect);
@@ -379,25 +338,16 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
             return 20;
         }
 
-        float pixelsPerUnit = windowHeight / (
-                2 * (float) Math.tan(Math.toRadians(60) / 2) * depth
-        );
+        float pixelsPerUnit = framebufferHeight
+                / (2 * (float) Math.tan(Math.toRadians(60) / 2) * depth);
 
         return radius * pixelsPerUnit;
     }
 
     private float calculateObjectDepth(ScanMesh object) {
-        float px = selectedObject != null
-                ? selectedObject.getPositionX()
-                : 0;
-
-        float py = selectedObject != null
-                ? selectedObject.getPositionY()
-                : 0;
-
-        float pz = selectedObject != null
-                ? selectedObject.getPositionZ()
-                : 0;
+        float px = selectedObject != null ? selectedObject.getPositionX() : 0;
+        float py = selectedObject != null ? selectedObject.getPositionY() : 0;
+        float pz = selectedObject != null ? selectedObject.getPositionZ() : 0;
 
         float[] point = rotatePoint(
                 object.getPositionX() - px,
@@ -432,6 +382,148 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
         };
     }
 
+    private float[] transformBonePoint(ScanMesh skeleton, float x, float y, float z) {
+        /*
+         * This transformation intentionally mirrors the exact order used
+         * by OpenGL in render():
+         *
+         * global translation
+         * global rotation around selected-object pivot
+         * skeleton translation
+         * skeleton scale
+         * skeleton rotation
+         */
+
+        float[] local = new float[]{x, y, z};
+
+        /*
+         * Skeleton local rotation.
+         */
+        local = rotatePoint(
+                local[0],
+                local[1],
+                local[2],
+                skeleton.getRotationX(),
+                skeleton.getRotationY(),
+                skeleton.getRotationZ()
+        );
+
+        /*
+         * Skeleton scale.
+         */
+        float scale = skeleton.getScale();
+
+        local[0] *= scale;
+        local[1] *= scale;
+        local[2] *= scale;
+
+        /*
+         * Skeleton position.
+         */
+        float worldX = local[0] + skeleton.getPositionX();
+        float worldY = local[1] + skeleton.getPositionY();
+        float worldZ = local[2] + skeleton.getPositionZ();
+
+        /*
+         * The global renderer rotates everything around the selected
+         * object's position.
+         */
+        float pivotX = selectedObject != null
+                ? selectedObject.getPositionX()
+                : 0;
+
+        float pivotY = selectedObject != null
+                ? selectedObject.getPositionY()
+                : 0;
+
+        float pivotZ = selectedObject != null
+                ? selectedObject.getPositionZ()
+                : 0;
+
+        float relativeX = worldX - pivotX;
+        float relativeY = worldY - pivotY;
+        float relativeZ = worldZ - pivotZ;
+
+        float[] rotated = rotatePoint(
+                relativeX,
+                relativeY,
+                relativeZ
+        );
+
+        /*
+         * Add the pivot back and apply the renderer movement.
+         */
+        worldX = rotated[0] + pivotX + positionX;
+        worldY = rotated[1] + pivotY + positionY;
+        worldZ = rotated[2] + pivotZ + positionZ;
+
+        /*
+         * Camera translation.
+         */
+        return new float[]{
+                worldX,
+                worldY,
+                worldZ - cameraDistance
+        };
+    }
+
+    private float[] rotatePoint(
+            float x,
+            float y,
+            float z,
+            float rotX,
+            float rotY,
+            float rotZ
+    ) {
+        double ax = Math.toRadians(rotX);
+        double ay = Math.toRadians(rotY);
+        double az = Math.toRadians(rotZ);
+
+        float cx = (float) Math.cos(ax);
+        float sx = (float) Math.sin(ax);
+
+        float cy = (float) Math.cos(ay);
+        float sy = (float) Math.sin(ay);
+
+        float cz = (float) Math.cos(az);
+        float sz = (float) Math.sin(az);
+
+        float y1 = y * cx - z * sx;
+        float z1 = y * sx + z * cx;
+
+        float x2 = x * cy + z1 * sy;
+        float z2 = -x * sy + z1 * cy;
+
+        return new float[]{
+                x2 * cz - y1 * sz,
+                x2 * sz + y1 * cz,
+                z2
+        };
+    }
+
+    private double[] projectWorldPoint(float[] point) {
+        float cameraX = point[0];
+        float cameraY = point[1];
+        float cameraZ = point[2];
+
+        if (cameraZ >= -.1f) {
+            return null;
+        }
+
+        float aspect = (float) framebufferWidth
+                / Math.max(1, framebufferHeight);
+
+        float tan = (float) Math.tan(Math.toRadians(60) / 2);
+
+        double ndcX = cameraX / (-cameraZ * tan * aspect);
+        double ndcY = cameraY / (-cameraZ * tan);
+
+        return new double[]{
+                (ndcX + 1) * windowWidth / 2,
+                (1 - ndcY) * windowHeight / 2
+        };
+    }
+
     private void renderLoop() {
         try {
             GLFW.glfwMakeContextCurrent(window);
@@ -461,30 +553,12 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
         GL11.glEnable(GL11.GL_LIGHT0);
         GL11.glEnable(GL11.GL_COLOR_MATERIAL);
 
-        GL11.glColorMaterial(
-                GL11.GL_FRONT_AND_BACK,
-                GL11.GL_AMBIENT_AND_DIFFUSE
-        );
-
+        GL11.glColorMaterial(GL11.GL_FRONT_AND_BACK, GL11.GL_AMBIENT_AND_DIFFUSE);
         GL11.glEnable(GL11.GL_TEXTURE_2D);
 
-        GL11.glLightfv(
-                GL11.GL_LIGHT0,
-                GL11.GL_POSITION,
-                new float[]{2, 3, 4, 1}
-        );
-
-        GL11.glLightfv(
-                GL11.GL_LIGHT0,
-                GL11.GL_DIFFUSE,
-                new float[]{1, 1, 1, 1}
-        );
-
-        GL11.glLightfv(
-                GL11.GL_LIGHT0,
-                GL11.GL_AMBIENT,
-                new float[]{.2f, .2f, .2f, 1}
-        );
+        GL11.glLightfv(GL11.GL_LIGHT0, GL11.GL_POSITION, new float[]{2, 3, 4, 1});
+        GL11.glLightfv(GL11.GL_LIGHT0, GL11.GL_DIFFUSE, new float[]{1, 1, 1, 1});
+        GL11.glLightfv(GL11.GL_LIGHT0, GL11.GL_AMBIENT, new float[]{.2f, .2f, .2f, 1});
     }
 
     private void processCommands() {
@@ -514,8 +588,7 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
 
     void destroyWindowOnMainThread() {
         if (!GLFWManager.isOwnerThread()) {
-            throw new IllegalStateException(
-                    "Window destruction must happen on the GLFW main thread");
+            throw new IllegalStateException("Window destruction must happen on the GLFW main thread");
         }
 
         if (window == 0 || !renderFinished) {
@@ -559,32 +632,16 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
         updateViewport();
 
         GL11.glClearColor(.1f, .1f, .1f, 1);
-        GL11.glClear(
-                GL11.GL_COLOR_BUFFER_BIT
-                        | GL11.GL_DEPTH_BUFFER_BIT
-        );
+        GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
 
         GL11.glMatrixMode(GL11.GL_MODELVIEW);
         GL11.glLoadIdentity();
 
-        float px = selectedObject != null
-                ? selectedObject.getPositionX()
-                : 0;
+        float px = selectedObject != null ? selectedObject.getPositionX() : 0;
+        float py = selectedObject != null ? selectedObject.getPositionY() : 0;
+        float pz = selectedObject != null ? selectedObject.getPositionZ() : 0;
 
-        float py = selectedObject != null
-                ? selectedObject.getPositionY()
-                : 0;
-
-        float pz = selectedObject != null
-                ? selectedObject.getPositionZ()
-                : 0;
-
-        GL11.glTranslatef(
-                positionX,
-                positionY,
-                positionZ - cameraDistance
-        );
-
+        GL11.glTranslatef(positionX, positionY, positionZ - cameraDistance);
         GL11.glTranslatef(px, py, pz);
 
         GL11.glRotatef(rotationX, 1, 0, 0);
@@ -771,14 +828,11 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
         float max = 0;
 
         for (int i = 0; i < vertices.length; i += 3) {
-            max = Math.max(
-                    max,
-                    (float) Math.sqrt(
-                            vertices[i] * vertices[i]
-                                    + vertices[i + 1] * vertices[i + 1]
-                                    + vertices[i + 2] * vertices[i + 2]
-                    )
-            );
+            max = Math.max(max, (float) Math.sqrt(
+                    vertices[i] * vertices[i]
+                            + vertices[i + 1] * vertices[i + 1]
+                            + vertices[i + 2] * vertices[i + 2]
+            ));
         }
 
         return Math.max(.5f, max * 1.2f);
@@ -836,29 +890,10 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
 
         GL11.glBindTexture(GL11.GL_TEXTURE_2D, id);
 
-        GL11.glTexParameteri(
-                GL11.GL_TEXTURE_2D,
-                GL11.GL_TEXTURE_MIN_FILTER,
-                GL11.GL_LINEAR
-        );
-
-        GL11.glTexParameteri(
-                GL11.GL_TEXTURE_2D,
-                GL11.GL_TEXTURE_MAG_FILTER,
-                GL11.GL_LINEAR
-        );
-
-        GL11.glTexParameteri(
-                GL11.GL_TEXTURE_2D,
-                GL11.GL_TEXTURE_WRAP_S,
-                GL11.GL_REPEAT
-        );
-
-        GL11.glTexParameteri(
-                GL11.GL_TEXTURE_2D,
-                GL11.GL_TEXTURE_WRAP_T,
-                GL11.GL_REPEAT
-        );
+        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR);
+        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_LINEAR);
+        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL11.GL_REPEAT);
+        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL11.GL_REPEAT);
 
         try (MemoryStack stack = MemoryStack.stackPush()) {
             IntBuffer w = stack.mallocInt(1);
@@ -875,10 +910,8 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
 
             if (image == null) {
                 GL11.glDeleteTextures(id);
-
                 throw new IllegalStateException(
-                        "Failed to load texture: "
-                                + STBImage.stbi_failure_reason()
+                        "Failed to load texture: " + STBImage.stbi_failure_reason()
                 );
             }
 
@@ -953,11 +986,7 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
 
             float[] normal = LightNormalizer.calculateNormal(p1, p2, p3);
 
-            GL11.glNormal3f(
-                    normal[0],
-                    normal[1],
-                    normal[2]
-            );
+            GL11.glNormal3f(normal[0], normal[1], normal[2]);
 
             drawVertex(p1, getMaterial(materials, i1), uvs, i, 0);
             drawVertex(p2, getMaterial(materials, i2), uvs, i, 1);
@@ -1007,11 +1036,7 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
             }
         }
 
-        GL11.glVertex3f(
-                vertex[0],
-                vertex[1],
-                vertex[2]
-        );
+        GL11.glVertex3f(vertex[0], vertex[1], vertex[2]);
     }
 
     private float[] getVertex(float[] vertices, int index) {
@@ -1029,15 +1054,14 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
     }
 
     private Material getMaterial(Material[] materials, int index) {
-        return materials != null
-                && index >= 0
-                && index < materials.length
+        return materials != null && index >= 0 && index < materials.length
                 ? materials[index]
                 : null;
     }
 
     private void bindTexture(Texture texture) {
         Integer id = textureIds.get(texture);
+
         GL11.glBindTexture(
                 GL11.GL_TEXTURE_2D,
                 id == null ? 0 : id
@@ -1103,6 +1127,10 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
     @Override
     public void setBoneLabelsVisible(boolean visible) {
         boneLabelsVisible = visible;
+
+        if (!visible) {
+            hoveredBone = null;
+        }
     }
 
     @Override
@@ -1114,9 +1142,7 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
         try {
             String path = "org/abc/models/skeleton.json";
 
-            var resource = getClass()
-                    .getClassLoader()
-                    .getResource(path);
+            var resource = getClass().getClassLoader().getResource(path);
 
             if (resource == null) {
                 System.err.println("[ERROR] skeleton.json not found");
@@ -1190,6 +1216,33 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
             }
         }
 
+        /*
+         * Take a local snapshot.
+         *
+         * The mouse callback runs on another thread and can change
+         * hoveredBone between two accesses. Without this local reference,
+         * the following code can throw a NullPointerException.
+         */
+        BoneData hovered = hoveredBone;
+
+        if (hovered != null) {
+            float[] min = hovered.getBboxMin();
+            float[] max = hovered.getBboxMax();
+
+            if (min != null
+                    && max != null
+                    && min.length >= 3
+                    && max.length >= 3) {
+
+                GL11.glColor3f(1, 1, 1);
+                GL11.glLineWidth(3);
+
+                drawBoneBoundingBox(min, max);
+            }
+
+            drawBoneLabel(hovered);
+        }
+
         GL11.glEnable(GL11.GL_DEPTH_TEST);
         GL11.glEnable(GL11.GL_TEXTURE_2D);
         GL11.glEnable(GL11.GL_LIGHTING);
@@ -1208,19 +1261,16 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
 
         GL11.glBegin(GL11.GL_LINES);
 
-        // Bottom
         line(minX, minY, minZ, maxX, minY, minZ);
         line(maxX, minY, minZ, maxX, minY, maxZ);
         line(maxX, minY, maxZ, minX, minY, maxZ);
         line(minX, minY, maxZ, minX, minY, minZ);
 
-        // Top
         line(minX, maxY, minZ, maxX, maxY, minZ);
         line(maxX, maxY, minZ, maxX, maxY, maxZ);
         line(maxX, maxY, maxZ, minX, maxY, maxZ);
         line(minX, maxY, maxZ, minX, maxY, minZ);
 
-        // Vertical
         line(minX, minY, minZ, minX, maxY, minZ);
         line(maxX, minY, minZ, maxX, maxY, minZ);
         line(maxX, minY, maxZ, maxX, maxY, maxZ);
@@ -1229,9 +1279,285 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
         GL11.glEnd();
     }
 
+    private void updateHoveredBone(double mouseX, double mouseY) {
+        BoneData newHoveredBone = null;
+
+        ScanMesh skeleton = getSkeletonMesh();
+
+        if (skeleton == null || !boneLabelsVisible) {
+            hoveredBone = null;
+            return;
+        }
+
+        double closestDepth = Double.MAX_VALUE;
+        double smallestArea = Double.MAX_VALUE;
+
+        for (BoneData bone : boneDataList) {
+            if (bone == null
+                    || bone.getBboxMin() == null
+                    || bone.getBboxMax() == null) {
+                continue;
+            }
+
+            double[] bounds = projectBoneBounds(skeleton, bone);
+
+            if (bounds == null) {
+                continue;
+            }
+
+            if (mouseX < bounds[0]
+                    || mouseX > bounds[2]
+                    || mouseY < bounds[1]
+                    || mouseY > bounds[3]) {
+                continue;
+            }
+
+            double depth = calculateBoneDepth(skeleton, bone);
+            double area = Math.max(
+                    1,
+                    (bounds[2] - bounds[0]) * (bounds[3] - bounds[1])
+            );
+
+            if (depth < closestDepth
+                    || (Math.abs(depth - closestDepth) < .01
+                    && area < smallestArea)) {
+
+                newHoveredBone = bone;
+                closestDepth = depth;
+                smallestArea = area;
+            }
+        }
+
+        hoveredBone = newHoveredBone;
+    }
+
+    private double[] projectBoneBounds(
+            ScanMesh skeleton,
+            BoneData bone
+    ) {
+        float[] min = bone.getBboxMin();
+        float[] max = bone.getBboxMax();
+
+        if (min == null
+                || max == null
+                || min.length < 3
+                || max.length < 3) {
+            return null;
+        }
+
+        double minX = Double.MAX_VALUE;
+        double minY = Double.MAX_VALUE;
+        double maxX = -Double.MAX_VALUE;
+        double maxY = -Double.MAX_VALUE;
+
+        boolean visiblePoint = false;
+
+        /*
+         * Project all 8 corners of the EXACT bounding box supplied
+         * by skeleton.json.
+         */
+        for (int i = 0; i < 8; i++) {
+            float x = (i & 1) == 0 ? min[0] : max[0];
+            float y = (i & 2) == 0 ? min[1] : max[1];
+            float z = (i & 4) == 0 ? min[2] : max[2];
+
+            double[] screen = projectBonePoint(
+                    skeleton,
+                    x,
+                    y,
+                    z
+            );
+
+            if (screen == null) {
+                continue;
+            }
+
+            visiblePoint = true;
+
+            minX = Math.min(minX, screen[0]);
+            minY = Math.min(minY, screen[1]);
+            maxX = Math.max(maxX, screen[0]);
+            maxY = Math.max(maxY, screen[1]);
+        }
+
+        if (!visiblePoint) {
+            return null;
+        }
+
+        return new double[]{
+                minX,
+                minY,
+                maxX,
+                maxY
+        };
+    }
+
+    private double[] projectBoneCenter(
+            ScanMesh skeleton,
+            BoneData bone
+    ) {
+        float[] min = bone.getBboxMin();
+        float[] max = bone.getBboxMax();
+
+        if (min == null
+                || max == null
+                || min.length < 3
+                || max.length < 3) {
+            return null;
+        }
+
+        float x = (min[0] + max[0]) / 2;
+        float y = (min[1] + max[1]) / 2;
+        float z = (min[2] + max[2]) / 2;
+
+        return projectBonePoint(
+                skeleton,
+                x,
+                y,
+                z
+        );
+    }
+
+    private double[] projectBonePoint(
+            ScanMesh skeleton,
+            float x,
+            float y,
+            float z
+    ) {
+        /*
+         * Use the exact same transformation as the bounding box
+         * is rendered with.
+         */
+        float[] point = transformBonePoint(
+                skeleton,
+                x,
+                y,
+                z
+        );
+
+        return projectWorldPoint(point);
+    }
+
+    private float calculateBoneDepth(
+            ScanMesh skeleton,
+            BoneData bone
+    ) {
+        float[] min = bone.getBboxMin();
+        float[] max = bone.getBboxMax();
+
+        if (min == null || max == null) {
+            return Float.MAX_VALUE;
+        }
+
+        float x = (min[0] + max[0]) / 2;
+        float y = (min[1] + max[1]) / 2;
+        float z = (min[2] + max[2]) / 2;
+
+        float[] point = transformBonePoint(
+                skeleton,
+                x,
+                y,
+                z
+        );
+
+        return -point[2];
+    }
+
+    private void drawBoneLabel(BoneData bone) {
+        String name = bone.getName();
+
+        if (name == null || name.isBlank()) {
+            return;
+        }
+
+        float[] min = bone.getBboxMin();
+        float[] max = bone.getBboxMax();
+
+        if (min == null
+                || max == null
+                || min.length < 3
+                || max.length < 3) {
+            return;
+        }
+
+        float x = (min[0] + max[0]) / 2;
+        float y = max[1];
+        float z = (min[2] + max[2]) / 2;
+
+        Font font = new Font(
+                "Arial",
+                Font.BOLD,
+                14
+        );
+
+        BufferedImage image = new BufferedImage(
+                256,
+                32,
+                BufferedImage.TYPE_INT_ARGB
+        );
+
+        Graphics2D graphics = image.createGraphics();
+
+        graphics.setRenderingHint(
+                RenderingHints.KEY_TEXT_ANTIALIASING,
+                RenderingHints.VALUE_TEXT_ANTIALIAS_ON
+        );
+
+        graphics.setColor(
+                new Color(255, 255, 255, 255)
+        );
+
+        graphics.setFont(font);
+        graphics.drawString(name, 4, 21);
+
+        graphics.dispose();
+
+        ByteBuffer buffer = ByteBuffer.allocateDirect(
+                image.getWidth()
+                        * image.getHeight()
+                        * 4
+        );
+
+        for (int yPixel = image.getHeight() - 1;
+             yPixel >= 0;
+             yPixel--) {
+
+            for (int xPixel = 0;
+                 xPixel < image.getWidth();
+                 xPixel++) {
+
+                int pixel = image.getRGB(
+                        xPixel,
+                        yPixel
+                );
+
+                buffer.put((byte) ((pixel >> 16) & 0xFF));
+                buffer.put((byte) ((pixel >> 8) & 0xFF));
+                buffer.put((byte) (pixel & 0xFF));
+                buffer.put((byte) ((pixel >> 24) & 0xFF));
+            }
+        }
+
+        buffer.flip();
+
+        GL11.glRasterPos3f(x, y, z);
+
+        GL11.glDrawPixels(
+                image.getWidth(),
+                image.getHeight(),
+                GL11.GL_RGBA,
+                GL11.GL_UNSIGNED_BYTE,
+                buffer
+        );
+    }
+
     private void line(
-            float x1, float y1, float z1,
-            float x2, float y2, float z2
+            float x1,
+            float y1,
+            float z1,
+            float x2,
+            float y2,
+            float z2
     ) {
         GL11.glVertex3f(x1, y1, z1);
         GL11.glVertex3f(x2, y2, z2);
@@ -1253,11 +1579,7 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
         }
 
         System.out.printf(
-                "[DEBUG] Selected object transform | "
-                        + "Position: (%.4f, %.4f, %.4f) | "
-                        + "Rotation: (%.4f, %.4f, %.4f) | "
-                        + "Scale: %.4f%n",
-
+                "[DEBUG] Selected object transform | Position: (%.4f, %.4f, %.4f) | Rotation: (%.4f, %.4f, %.4f) | Scale: %.4f%n",
                 selectedObject.getPositionX(),
                 selectedObject.getPositionY(),
                 selectedObject.getPositionZ(),
