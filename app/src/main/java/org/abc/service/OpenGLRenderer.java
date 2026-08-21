@@ -19,8 +19,7 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
-        Renderer, Rotatable, Runnable, Zoomable {
+public class OpenGLRenderer implements RenderStrategy, Runnable {
 
     private volatile long window;
     private volatile int windowWidth = 800, windowHeight = 600;
