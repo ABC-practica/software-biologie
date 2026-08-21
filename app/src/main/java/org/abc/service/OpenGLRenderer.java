@@ -19,8 +19,7 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
-        Renderer, Rotatable, Runnable, Zoomable {
+public class OpenGLRenderer implements RenderStrategy, Runnable {
 
     private volatile long window;
     private volatile int windowWidth = 800, windowHeight = 600;
@@ -43,6 +42,7 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
     private final Queue<Runnable> commands = new ConcurrentLinkedQueue<>();
 
     private Thread renderThread;
+    private Runnable onClosed;
 
     public OpenGLRenderer(List<ScanMesh> objects) {
         this.objects = new CopyOnWriteArrayList<>(objects);
@@ -340,6 +340,9 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
         if (window == 0 || !renderFinished) return;
 
         GLFW.glfwDestroyWindow(window);
+        if (onClosed != null) {
+            onClosed.run();
+        }           
         window = 0;
         renderThread = null;
         GLFWManager.unregister(this);
@@ -713,5 +716,9 @@ public class OpenGLRenderer implements RenderStrategy, RendererControl, Movable,
                 }
             }
         });
+    }
+
+    public void setOnClosed(Runnable onClosed) {
+        this.onClosed = onClosed;
     }
 }
