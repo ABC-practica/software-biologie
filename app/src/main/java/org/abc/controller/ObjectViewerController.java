@@ -10,6 +10,7 @@ import org.abc.component.Toolbox;
 import org.abc.model.ScanMesh;
 import org.abc.service.Loader;
 import org.abc.service.ObjLoader;
+import org.abc.service.OpenGLRenderer;
 import org.abc.service.RenderStrategy;
 import org.abc.service.RenderStrategyFactory;
 import org.abc.service.ThreeMfLoader;
@@ -203,11 +204,21 @@ public class ObjectViewerController {
                 );
 
             } else {
-                RenderStrategy newRenderer =
-                        RenderStrategyFactory.createRenderer(meshes);
+                RenderStrategy newRenderer = RenderStrategyFactory.createRenderer(meshes);
 
                 renderer = newRenderer;
                 renderers.add(newRenderer);
+
+                if (newRenderer instanceof OpenGLRenderer openGLRenderer) {
+                    openGLRenderer.setOnClosed(() -> {
+                        renderer = null;
+                        renderers.remove(newRenderer);
+
+                        System.out.println(
+                                "[INFO] Renderer closed. Controller reference cleared."
+                        );
+                    });
+                }
 
                 newRenderer.embedIn(viewportContainer);
 

@@ -67,8 +67,7 @@ replay_pid*
 
 # Environment / local configuration
 .env
-<<<<<<< ours
 .env.*
-=======
-.env.*
->>>>>>> theirs
+
+# Bin
+bin/
