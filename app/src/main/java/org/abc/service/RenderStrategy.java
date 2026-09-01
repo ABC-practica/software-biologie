@@ -19,6 +19,17 @@ public interface RenderStrategy extends RendererControl, Movable, Rotatable, Zoo
         return false;
     }
 
+    default void setSelectedObjectTargetVertexCount(int targetVertexCount) {
+    }
+
+    default int getSelectedObjectTargetVertexCount() {
+        return 0;
+    }
+
+    default int getSelectedObjectMaxVertexCount() {
+        return 0;
+    }
+
     default void addMeshes(List<ScanMesh> meshes) {
         throw new UnsupportedOperationException(
                 "addMeshes is not supported by this renderer"

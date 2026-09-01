@@ -112,10 +112,7 @@ public class OpenGLRenderer implements RenderStrategy, Runnable {
         GLFW.glfwSetScrollCallback(window,
                 (w, x, y) -> {
                     float amount = (float) -Math.signum(y) * .15f;
-                    if (objectScalingMode && selectedObject != null)
-                        selectedObject.setScale(selectedObject.getScale() + amount);
-                    else
-                        zoom(amount);
+                    zoom(amount);
                 });
 
         GLFW.glfwSetKeyCallback(window, (w, key, scancode, action, mods) -> {
@@ -350,6 +347,9 @@ public class OpenGLRenderer implements RenderStrategy, Runnable {
 
     @Override
     public void refresh() {
+        if (GLFWManager.isInitialized()) {
+            GLFW.glfwPostEmptyEvent();
+        }
     }
 
     @Override
@@ -692,6 +692,28 @@ public class OpenGLRenderer implements RenderStrategy, Runnable {
     @Override
     public boolean isObjectScalingEnabled() {
         return objectScalingMode;
+    }
+
+    @Override
+    public void setSelectedObjectTargetVertexCount(int targetVertexCount) {
+        ScanMesh mesh = selectedObject != null ? selectedObject : (objects.isEmpty() ? null : objects.get(0));
+        if (mesh == null) {
+            return;
+        }
+
+        mesh.setSimplificationScale(targetVertexCount);
+    }
+
+    @Override
+    public int getSelectedObjectTargetVertexCount() {
+        ScanMesh mesh = selectedObject != null ? selectedObject : (objects.isEmpty() ? null : objects.get(0));
+        return mesh == null ? 0 : Math.max(1, mesh.getCurrentVertexCount());
+    }
+
+    @Override
+    public int getSelectedObjectMaxVertexCount() {
+        ScanMesh mesh = selectedObject != null ? selectedObject : (objects.isEmpty() ? null : objects.get(0));
+        return mesh == null ? 1 : Math.max(1, mesh.getOriginalVertexCount());
     }
 
     @Override

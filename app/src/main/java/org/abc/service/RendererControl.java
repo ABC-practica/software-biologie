@@ -23,4 +23,10 @@ public interface RendererControl {
     void setObjectScalingEnabled(boolean enabled);
 
     boolean isObjectScalingEnabled();
+
+    void setSelectedObjectTargetVertexCount(int targetVertexCount);
+
+    int getSelectedObjectTargetVertexCount();
+
+    int getSelectedObjectMaxVertexCount();
 }
