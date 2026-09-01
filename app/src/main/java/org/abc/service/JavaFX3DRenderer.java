@@ -583,6 +583,16 @@ public class JavaFX3DRenderer implements RenderStrategy {
     }
 
     @Override
+    public java.util.concurrent.CompletableFuture<Void> setSelectedObjectTargetVertexCountAsync(int targetVertexCount) {
+        if (scanMeshes.isEmpty()) {
+            return java.util.concurrent.CompletableFuture.completedFuture(null);
+        }
+
+        ScanMesh mesh = scanMeshes.get(0);
+        return mesh.setSimplificationScale(targetVertexCount);
+    }
+
+    @Override
     public int getSelectedObjectTargetVertexCount() {
         if (scanMeshes.isEmpty()) {
             return 0;

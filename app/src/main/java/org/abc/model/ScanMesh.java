@@ -78,9 +78,9 @@ public class ScanMesh {
         return simplificationScale;
     }
 
-    public void setSimplificationScale(float targetVertexCount) {
+    public CompletableFuture<Void> setSimplificationScale(float targetVertexCount) {
         if (originalVertices == null || originalIndices == null) {
-            return;
+            return CompletableFuture.completedFuture(null);
         }
 
         float maxVertices = Math.max(1.0f, originalVertexCount);
@@ -88,15 +88,20 @@ public class ScanMesh {
         simplificationScale = clamped;
 
         int requestedVertexCount = Math.max(1, Math.round(clamped));
+        System.out.println("[INFO] Mesh simplification requested: original=" + originalVertexCount + ", target=" + requestedVertexCount);
+
         if (requestedVertexCount >= originalVertexCount) {
             vertices = originalVertices.clone();
             indices = originalIndices.clone();
-            return;
+            System.out.println("[INFO] Mesh simplification reset to original geometry.");
+            return CompletableFuture.completedFuture(null);
         }
 
         final int expectedVersion = ++simplificationRequestVersion;
 
-        CompletableFuture.runAsync(() -> {
+        return CompletableFuture.runAsync(() -> {
+            System.out.println("[INFO] Simplifying mesh in background: " + originalVertexCount + " -> " + requestedVertexCount + " vertices");
+
             ScanMesh simplified = MeshSimplifier.simplify(
                     new ScanMesh(
                             originalVertices.clone(),
@@ -108,6 +113,7 @@ public class ScanMesh {
             );
 
             if (simplified == null || expectedVersion != simplificationRequestVersion) {
+                System.out.println("[INFO] Simplification skipped: stale job or null result.");
                 return;
             }
 
@@ -118,6 +124,7 @@ public class ScanMesh {
 
                 vertices = simplified.getVertices();
                 indices = simplified.getIndices();
+                System.out.println("[INFO] Mesh simplified successfully: " + vertices.length / 3 + " vertices, " + indices.length / 3 + " triangles");
             }
         });
     }

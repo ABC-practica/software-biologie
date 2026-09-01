@@ -705,6 +705,16 @@ public class OpenGLRenderer implements RenderStrategy, Runnable {
     }
 
     @Override
+    public java.util.concurrent.CompletableFuture<Void> setSelectedObjectTargetVertexCountAsync(int targetVertexCount) {
+        ScanMesh mesh = selectedObject != null ? selectedObject : (objects.isEmpty() ? null : objects.get(0));
+        if (mesh == null) {
+            return java.util.concurrent.CompletableFuture.completedFuture(null);
+        }
+
+        return mesh.setSimplificationScale(targetVertexCount);
+    }
+
+    @Override
     public int getSelectedObjectTargetVertexCount() {
         ScanMesh mesh = selectedObject != null ? selectedObject : (objects.isEmpty() ? null : objects.get(0));
         return mesh == null ? 0 : Math.max(1, mesh.getCurrentVertexCount());
