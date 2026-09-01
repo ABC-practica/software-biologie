@@ -243,13 +243,8 @@ public class JavaFX3DRenderer implements RenderStrategy {
                     float amount = (float) -Math.signum(
                             event.getDeltaY()
                     ) * 0.15f;
-                    
-                    if (objectScalingMode && !scanMeshes.isEmpty()) {
-                        ScanMesh firstMesh = scanMeshes.get(0);
-                        firstMesh.setScale(Math.max(0.1f, firstMesh.getScale() + amount));
-                    } else {
-                        zoom(amount);
-                    }
+
+                    zoom(amount);
                 }
         );
     }
@@ -436,7 +431,36 @@ public class JavaFX3DRenderer implements RenderStrategy {
 
     @Override
     public void refresh() {
-        updateTransforms();
+        Runnable refreshTask = () -> {
+            if (subScene == null && stage == null) {
+                updateTransforms();
+                return;
+            }
+
+            Group root = subScene != null ? (Group) subScene.getRoot() : (Group) stage.getScene().getRoot();
+            if (root == null || root.getChildren().isEmpty()) {
+                updateTransforms();
+                return;
+            }
+
+            Group meshGroup = (Group) root.getChildren().get(0);
+            meshGroup.getChildren().clear();
+
+            for (ScanMesh scanMesh : scanMeshes) {
+                TriangleMesh mesh = buildTriangleMesh(scanMesh);
+                MeshView meshView = new MeshView(mesh);
+                meshView.setMaterial(buildMaterial(scanMesh));
+                meshGroup.getChildren().add(meshView);
+            }
+
+            updateTransforms();
+        };
+
+        if (Platform.isFxApplicationThread()) {
+            refreshTask.run();
+        } else {
+            Platform.runLater(refreshTask);
+        }
     }
 
     @Override
@@ -546,6 +570,44 @@ public class JavaFX3DRenderer implements RenderStrategy {
     @Override
     public boolean isObjectScalingEnabled() {
         return objectScalingMode;
+    }
+
+    @Override
+    public void setSelectedObjectTargetVertexCount(int targetVertexCount) {
+        if (scanMeshes.isEmpty()) {
+            return;
+        }
+
+        ScanMesh mesh = scanMeshes.get(0);
+        mesh.setSimplificationScale(targetVertexCount);
+    }
+
+    @Override
+    public java.util.concurrent.CompletableFuture<Void> setSelectedObjectTargetVertexCountAsync(int targetVertexCount) {
+        if (scanMeshes.isEmpty()) {
+            return java.util.concurrent.CompletableFuture.completedFuture(null);
+        }
+
+        ScanMesh mesh = scanMeshes.get(0);
+        return mesh.setSimplificationScale(targetVertexCount);
+    }
+
+    @Override
+    public int getSelectedObjectTargetVertexCount() {
+        if (scanMeshes.isEmpty()) {
+            return 0;
+        }
+
+        return Math.max(1, scanMeshes.get(0).getCurrentVertexCount());
+    }
+
+    @Override
+    public int getSelectedObjectMaxVertexCount() {
+        if (scanMeshes.isEmpty()) {
+            return 1;
+        }
+
+        return Math.max(1, scanMeshes.get(0).getOriginalVertexCount());
     }
 
     @Override

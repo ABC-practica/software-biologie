@@ -2,6 +2,8 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Slider?>
 <?import javafx.scene.control.ToggleButton?>
 <?import javafx.scene.layout.VBox?>
 
@@ -29,6 +31,23 @@
     <Button text="Reset Camera"
             maxWidth="Infinity"
             onAction="#handleResetCamera"/>
+
+    <Label text="Mesh Simplification" style="-fx-font-weight: bold;"/>
+
+    <Slider fx:id="simplificationSlider"
+            min="1"
+            max="1"
+            value="1"
+            majorTickUnit="1000"
+            minorTickCount="0"
+            blockIncrement="1000"
+            showTickLabels="false"
+            showTickMarks="false"
+            maxWidth="Infinity"/>
+
+    <Label fx:id="simplificationLabel"
+           text="1 / 1 vertices"
+           wrapText="true"/>
 
     <ToggleButton fx:id="objectRotationToggle"
                   text="Object Rotation"

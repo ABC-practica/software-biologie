@@ -23,4 +23,15 @@ public interface RendererControl {
     void setObjectScalingEnabled(boolean enabled);
 
     boolean isObjectScalingEnabled();
+
+    void setSelectedObjectTargetVertexCount(int targetVertexCount);
+
+    default java.util.concurrent.CompletableFuture<Void> setSelectedObjectTargetVertexCountAsync(int targetVertexCount) {
+        setSelectedObjectTargetVertexCount(targetVertexCount);
+        return java.util.concurrent.CompletableFuture.completedFuture(null);
+    }
+
+    int getSelectedObjectTargetVertexCount();
+
+    int getSelectedObjectMaxVertexCount();
 }

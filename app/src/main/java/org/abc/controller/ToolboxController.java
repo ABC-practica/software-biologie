@@ -1,6 +1,9 @@
 package org.abc.controller;
 
+import javafx.application.Platform;
 import javafx.fxml.FXML;
+import javafx.scene.control.Label;
+import javafx.scene.control.Slider;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.layout.VBox;
 import javafx.stage.Window;
@@ -23,8 +26,34 @@ public class ToolboxController {
     @FXML
     private ToggleButton objectScalingToggle;
 
+    @FXML
+    private Slider simplificationSlider;
+
+    @FXML
+    private Label simplificationLabel;
+
     private Consumer<List<File>> filesSelected;
     private RendererControl window;
+
+    @FXML
+    private void initialize() {
+        if (simplificationSlider != null) {
+            simplificationSlider.valueProperty().addListener((observable, oldValue, newValue) -> {
+                if (window != null) {
+                    int targetVertexCount = (int) Math.round(newValue.doubleValue());
+                    System.out.println("[INFO] Slider changed -> simplifying selected object to " + targetVertexCount + " vertices");
+                    simplificationLabel.setText("Simplifying to " + String.format("%,d", targetVertexCount) + " vertices...");
+
+                    window.setSelectedObjectTargetVertexCountAsync(targetVertexCount)
+                            .thenRun(() -> Platform.runLater(() -> {
+                                window.refresh();
+                                updateSimplificationLabel();
+                                System.out.println("[INFO] Renderer refresh requested after simplification.");
+                            }));
+                }
+            });
+        }
+    }
 
     public void setFilesSelected(Consumer<List<File>> filesSelected) {
         this.filesSelected = filesSelected;
@@ -35,6 +64,7 @@ public class ToolboxController {
 
         if (window != null) {
             updateToggleState();
+            updateSimplificationState();
         }
     }
 
@@ -114,5 +144,32 @@ public class ToolboxController {
                     window.isObjectScalingEnabled()
             );
         }
+    }
+
+    private void updateSimplificationState() {
+        if (window == null || simplificationSlider == null) {
+            return;
+        }
+
+        int maxVertices = Math.max(1, window.getSelectedObjectMaxVertexCount());
+        int currentTarget = Math.max(1, Math.min(maxVertices, window.getSelectedObjectTargetVertexCount()));
+
+        simplificationSlider.setMin(1);
+        simplificationSlider.setMax(maxVertices);
+        simplificationSlider.setValue(currentTarget);
+        updateSimplificationLabel();
+    }
+
+    private void updateSimplificationLabel() {
+        if (simplificationLabel == null || simplificationSlider == null) {
+            return;
+        }
+
+        int currentTarget = (int) Math.round(simplificationSlider.getValue());
+        int maxVertices = (int) Math.round(simplificationSlider.getMax());
+
+        simplificationLabel.setText(
+                String.format("%,d / %,d vertices", currentTarget, maxVertices)
+        );
     }
 }
